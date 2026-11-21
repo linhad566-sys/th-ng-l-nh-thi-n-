@@ -1,1 +1,2066 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Thống Lĩnh Thiên Hạ 3D - Lục Đao PK</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+      background: #070a12; color: #f8fafc; font-family: 'Inter', sans-serif;
+      touch-action: none;
+    }
+    .font-wuxia { font-family: 'Cinzel', serif; }
+    #game-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 1;
+    }
+    .glass-panel {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.88), rgba(7, 10, 18, 0.92));
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+    }
+    .gold-btn {
+      background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+      border: 1px solid #fde68a;
+      color: #fffbeb;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+    .gold-btn:hover { filter: brightness(1.12); }
+    .gold-btn:active { transform: scale(0.95); }
+    .skill-btn {
+      position: relative; overflow: hidden;
+      background: radial-gradient(circle at 30% 25%, rgba(30, 41, 59, 0.95), rgba(9, 13, 24, 0.96));
+      border: 2px solid rgba(245, 158, 11, 0.65);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 0 12px rgba(245, 158, 11, 0.18);
+      transition: transform 0.1s ease, border-color 0.15s ease;
+    }
+    .skill-btn:active { transform: scale(0.92); }
+    .skill-cd-overlay {
+      position: absolute; inset: 0; background: rgba(2, 6, 23, 0.78);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: #fbbf24; pointer-events: none;
+    }
+    .floating-dmg {
+      position: fixed; z-index: 25; pointer-events: none;
+      font-weight: 900; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+      animation: floatUp 0.85s ease-out forwards;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.85); }
+      25% { opacity: 1; transform: translate(-50%, -18px) scale(1.18); }
+      100% { opacity: 0; transform: translate(-50%, -56px) scale(0.95); }
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 99px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.5); border-radius: 99px; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Canvas 3D chính -->
+  <canvas id="game-canvas"></canvas>
 
+  <!-- Lớp chứa số sát thương bay lên -->
+  <div id="dmg-layer" class="fixed inset-0 pointer-events-none z-20 overflow-hidden"></div>
+
+  <!-- Thông báo Toast -->
+  <div id="toast-box" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+
+  <!-- ========================================================= -->
+  <!-- MÀN HÌNH CHỌN 6 MÔN PHÁI & NẠP MÔ HÌNH 3D (.GLB)          -->
+  <!-- ========================================================= -->
+  <div id="select-screen" class="fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
+    <div class="glass-panel rounded-2xl w-full max-w-5xl p-4 sm:p-6 my-auto">
+      <div class="text-center mb-4 sm:mb-6">
+        <div class="inline-block px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase bg-amber-500/15 text-amber-300 border border-amber-500/40 mb-2">
+          Thế Giới Mở 3D • Lục Đao PK • Giao Dịch Tự Do
+        </div>
+        <h1 class="font-wuxia text-2xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-orange-600 drop-shadow">
+          THỐNG LĨNH THIÊN HẠ 3D
+        </h1>
+        <p class="text-slate-300 text-xs sm:text-sm mt-1">
+          Chọn 1 trong 6 đại môn phái hoặc nạp trực tiếp mô hình nhân vật 3D (.glb) từ máy tính của bạn
+        </p>
+      </div>
+
+      <!-- Lưới 6 Môn Phái -->
+      <div id="sect-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 mb-5"></div>
+
+      <!-- Thanh tùy chọn tên + nạp GLB + Vào game -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-amber-500/25">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+          <input id="player-name-input" type="text" maxlength="16" value="Độc Cô Cầu Bại"
+            class="px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-amber-500/40 text-amber-100 text-sm font-semibold focus:outline-none focus:border-amber-400"
+            placeholder="Nhập danh hiệu hiệp khách..." />
+          <label class="cursor-pointer px-3.5 py-2.5 rounded-xl bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-400/50 text-indigo-200 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition">
+            <span>📦 Nạp nhân vật 3D (.glb)</span>
+            <input id="glb-file-input" type="file" accept=".glb,.gltf" class="hidden" />
+          </label>
+          <span id="glb-status" class="text-xs text-emerald-400 font-medium self-center hidden">Đã nạp mô hình 3D!</span>
+        </div>
+        <button id="btn-start-game" class="gold-btn px-7 py-3 rounded-xl font-extrabold text-sm sm:text-base tracking-wide cursor-pointer">
+          ⚔️ BƯỚC VÀO GIANG HỒ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- GIAO DIỆN HUD TRONG GAME                                  -->
+  <!-- ========================================================= -->
+  <div id="hud" class="fixed inset-0 z-10 pointer-events-none hidden">
+    <!-- Góc trên trái: Thông tin nhân vật + Bảng Nhiệm Vụ Cốt Truyện -->
+    <div class="absolute top-3 left-3 flex flex-col gap-2 max-w-[270px] sm:max-w-xs pointer-events-auto">
+      <div class="glass-panel rounded-2xl p-2.5 sm:p-3">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <div class="flex items-center gap-2 min-w-0">
+            <div id="hud-sect-icon" class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-lg shrink-0">⚔️</div>
+            <div class="min-w-0">
+              <div id="hud-name" class="font-bold text-amber-200 text-xs sm:text-sm truncate">Độc Cô Cầu Bại</div>
+              <div class="text-[11px] text-slate-300 flex items-center gap-1.5">
+                <span id="hud-sect" class="text-amber-400 font-semibold">Chiến Sỹ</span>
+                <span>•</span>
+                <span>Cấp <b id="hud-lv" class="text-white">1</b></span>
+              </div>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-[11px] font-bold text-yellow-400">💰 <span id="hud-gold">500</span></div>
+            <div class="text-[10px] text-orange-300">⚔️ Lực: <span id="hud-atk">45</span></div>
+          </div>
+        </div>
+        <!-- Thanh Máu -->
+        <div class="w-full h-3.5 rounded-full bg-slate-900 border border-slate-700 overflow-hidden relative mb-1">
+          <div id="hud-hp-bar" class="h-full bg-gradient-to-r from-red-600 to-rose-400 transition-all duration-150" style="width:100%"></div>
+          <span id="hud-hp-text" class="absolute inset-0 text-[10px] font-bold flex items-center justify-center text-white drop-shadow">1000 / 1000</span>
+        </div>
+        <!-- Thanh Kinh Nghiệm -->
+        <div class="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+          <div id="hud-exp-bar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-200" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Thẻ Nhiệm Vụ Cốt Truyện (Bấm để tự tìm đường) -->
+      <button id="quest-tracker" class="glass-panel rounded-xl p-2.5 text-left hover:border-amber-400 transition cursor-pointer">
+        <div class="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-0.5">
+          <span id="quest-chapter">📜 Chương 1: Lệnh Bài Lạc Dương</span>
+          <span class="text-[10px] text-emerald-400 animate-pulse">▶ Tự đi</span>
+        </div>
+        <div id="quest-desc" class="text-xs text-slate-200 leading-snug">Đối thoại với Trưởng Lão Lạc Dương trong thành</div>
+      </button>
+    </div>
+
+    <!-- Thanh máu Boss Ma Tôn (giữa trên) -->
+    <div id="boss-bar" class="hidden absolute top-3 left-1/2 -translate-x-1/2 w-[260px] sm:w-[360px] glass-panel rounded-2xl p-2.5 border-rose-500/60">
+      <div class="flex items-center justify-between text-xs font-extrabold text-rose-300 mb-1">
+        <span>👹 BOSS: HUYẾT MA TÔN</span>
+        <span id="boss-hp-text">5000 / 5000</span>
+      </div>
+      <div class="w-full h-3.5 rounded-full bg-slate-950 border border-rose-500/50 overflow-hidden">
+        <div id="boss-hp-fill" class="h-full bg-gradient-to-r from-purple-700 via-rose-600 to-red-400 transition-all duration-150" style="width:100%"></div>
+      </div>
+    </div>
+
+    <!-- Góc trên phải: Mini-Map + Hàng nút chức năng -->
+    <div class="absolute top-3 right-3 flex flex-col items-end gap-2 pointer-events-auto">
+      <div class="glass-panel rounded-2xl p-2 flex flex-col items-center">
+        <div class="w-full flex items-center justify-between text-[10px] font-bold text-amber-300 mb-1 px-1">
+          <span id="zone-label">🏯 Thành Lạc Dương</span>
+          <span id="coords-label" class="text-slate-400">0, 36</span>
+        </div>
+        <canvas id="minimap-canvas" width="124" height="124" class="rounded-xl border border-amber-500/40 bg-slate-950 cursor-pointer" title="Bấm để mở Bản Đồ Thế Giới"></canvas>
+      </div>
+
+      <!-- Các nút tiện ích -->
+      <div class="grid grid-cols-3 gap-1.5">
+        <button id="btn-auto" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-slate-200 hover:border-amber-400 cursor-pointer">🤖 Auto</button>
+        <button id="btn-pk" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-slate-200 hover:border-rose-400 cursor-pointer">🕊️ Hòa Bình</button>
+        <button id="btn-home" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-emerald-300 hover:border-emerald-400 cursor-pointer">🏯 Về Thành</button>
+        <button id="btn-bag" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-amber-200 hover:border-amber-400 cursor-pointer">🎒 Túi (<span id="bag-count">0</span>)</button>
+        <button id="btn-market" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-yellow-300 hover:border-yellow-400 cursor-pointer">🏪 Chợ</button>
+        <button id="btn-story" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-sky-300 hover:border-sky-400 cursor-pointer">📜 Truyện</button>
+        <button id="btn-map" class="glass-panel px-2.5 py-2 rounded-xl text-[11px] font-bold text-indigo-300 hover:border-indigo-400 cursor-pointer col-span-3">🗺️ Bản Đồ Thế Giới & Dịch Chuyển</button>
+      </div>
+    </div>
+
+    <!-- Góc dưới trái: Joystick ảo cho Mobile/Chuột + Gợi ý phím -->
+    <div class="absolute bottom-4 left-4 pointer-events-auto flex flex-col items-start gap-2">
+      <div id="joystick-zone" class="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-slate-900/55 border-2 border-amber-500/40 relative flex items-center justify-center backdrop-blur-sm">
+        <div id="joystick-knob" class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 border-2 border-amber-100 shadow-lg pointer-events-none"></div>
+      </div>
+      <div class="hidden sm:block text-[11px] text-slate-300 bg-slate-950/75 px-2.5 py-1 rounded-lg border border-slate-700/60">
+        <b>WASD</b>: Chạy • <b>1–6</b>: Chiêu thức • <b>Kéo chuột phải</b>: Xoay góc nhìn
+      </div>
+    </div>
+
+    <!-- Góc dưới phải: 6 Nút Kỹ Năng Lục Đao -->
+    <div id="skill-bar" class="absolute bottom-4 right-4 pointer-events-auto grid grid-cols-3 gap-2 sm:gap-2.5"></div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CÁC CỬA SỔ MODAL: TÚI ĐỒ, CHỢ, BẢN ĐỒ, CỐT TRUYỆN, NPC   -->
+  <!-- ========================================================= -->
+  <div id="modal-backdrop" class="fixed inset-0 z-40 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-3">
+    <div class="glass-panel rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-amber-500/30 bg-slate-900/70">
+        <h2 id="modal-title" class="font-wuxia text-lg font-bold text-amber-300">Tiêu đề</h2>
+        <button id="modal-close" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-rose-600 text-white font-bold cursor-pointer">✕</button>
+      </div>
+      <div id="modal-body" class="p-4 overflow-y-auto custom-scroll text-sm text-slate-200 space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MÃ NGUỒN GAME 3D THREE.JS (ES MODULE)                     -->
+  <!-- ========================================================= -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // ---------------------------------------------------------
+    // 1. DỮ LIỆU 6 MÔN PHÁI, 6 KỸ NĂNG, CỐT TRUYỆN & CHỢ
+    // ---------------------------------------------------------
+    const SECTS = [
+      {
+        id: 'chiensy', name: 'Chiến Sỹ', icon: '⚔️', weapon: 'Bá Vương Đao',
+        desc: 'Công thủ toàn diện, đao pháp cương mãnh áp đảo tiền tuyến.',
+        hp: 1200, atk: 52, speed: 9.2,
+        robe: 0x991b1b, armor: 0xf59e0b, weaponColor: 0xfbbf24
+      },
+      {
+        id: 'thuatsy', name: 'Thuật Sỹ', icon: '🔥', weapon: 'Hỏa Lôi Trượng',
+        desc: 'Điều khiển nguyên tố lửa và sấm sét, sát thương diện rộng cực đại.',
+        hp: 920, atk: 66, speed: 8.8,
+        robe: 0x1d4ed8, armor: 0x38bdf8, weaponColor: 0x60a5fa
+      },
+      {
+        id: 'phuongsy', name: 'Phương Sỹ', icon: '☯️', weapon: 'Thái Cực Phất Trần',
+        desc: 'Tinh thông đạo thuật hộ thể, hồi phục mạnh và khống chế tà ma.',
+        hp: 1080, atk: 50, speed: 9.0,
+        robe: 0x0f766e, armor: 0x34d399, weaponColor: 0x5eead4
+      },
+      {
+        id: 'thichkhach', name: 'Thích Khách', icon: '🗡️', weapon: 'U Minh Song Nhận',
+        desc: 'Thân pháp quỷ mị, tốc độ cực nhanh và đòn kết liễu chí mạng.',
+        hp: 960, atk: 64, speed: 11.2,
+        robe: 0x312e81, armor: 0xa855f7, weaponColor: 0xe879f9
+      },
+      {
+        id: 'lucsy', name: 'Lực Sỹ', icon: '🪓', weapon: 'Khai Sơn Trọng Phủ',
+        desc: 'Thể phách kim cương, sinh lực dồi dào, tung chiêu chấn động sơn hà.',
+        hp: 1550, atk: 48, speed: 8.3,
+        robe: 0x78350f, armor: 0xd97706, weaponColor: 0xf97316
+      },
+      {
+        id: 'cungthu', name: 'Cung Thủ', icon: '🏹', weapon: 'Lạc Nhật Thần Cung',
+        desc: 'Bách bộ xuyên dương, tầm đánh rộng, linh hoạt thả diều đối thủ.',
+        hp: 980, atk: 60, speed: 10.2,
+        robe: 0x166534, armor: 0xa3e635, weaponColor: 0xbef264
+      }
+    ];
+
+    const SKILLS = [
+      { name: 'Trảm Kích', key: '1', icon: '⚔️', cd: 0.9, range: 4.6, mult: 1.15, dash: 0, heal: 0, color: 0xfbbf24 },
+      { name: 'Xoáy Đao', key: '2', icon: '🌪️', cd: 3.5, range: 6.2, mult: 1.65, dash: 0, heal: 0, color: 0x38bdf8 },
+      { name: 'Xung Phong', key: '3', icon: '⚡', cd: 4.5, range: 5.2, mult: 1.5, dash: 6.5, heal: 0, color: 0xfef08a },
+      { name: 'Hộ Thể', key: '4', icon: '💚', cd: 7.0, range: 4.0, mult: 0.6, dash: 0, heal: 0.35, color: 0x4ade80 },
+      { name: 'Liệt Hỏa', key: '5', icon: '🔥', cd: 6.5, range: 7.5, mult: 2.35, dash: 0, heal: 0, color: 0xf97316 },
+      { name: 'Lục Đao Tuyệt', key: '6', icon: '🌟', cd: 10.5, range: 9.5, mult: 3.6, dash: 0, heal: 0, color: 0xc084fc }
+    ];
+
+    const STORY_CHAPTERS = [
+      {
+        title: 'Chương 1: Lệnh Bài Lạc Dương',
+        desc: 'Đến gặp Trưởng Lão Lạc Dương (chấm xanh trong thành) để nhận mật lệnh.',
+        lore: 'Thiên hạ đại loạn, Huyết Ma Tôn phá phong ấn tại Huyết Chiến Đài khiến yêu thú tràn vào Rừng U Minh. Trưởng Lão Thành Lạc Dương đang triệu tập lục đại môn phái.',
+        target: new THREE.Vector3(0, 0, 29),
+        rewardGold: 300, rewardExp: 80
+      },
+      {
+        title: 'Chương 2: Thanh Tẩy Rừng U Minh',
+        desc: 'Tiêu diệt 5 yêu quái trong Rừng U Minh (0/5).',
+        lore: 'Rừng U Minh phía Bắc thành đã bị Ma khí bao phủ. Hãy ra khỏi cổng thành, rèn luyện Lục Đao Pháp và tiêu diệt bọn Yêu Lang, Hắc Y Nhân.',
+        target: new THREE.Vector3(0, 0, 2),
+        rewardGold: 500, rewardExp: 180
+      },
+      {
+        title: 'Chương 3: Giang Hồ Tranh Bá',
+        desc: 'Đạt Cấp 3 hoặc bật Đồ Sát (PK) hạ 1 Cao Thủ Giang Hồ.',
+        lore: 'Trước khi đối đầu Ma Tôn, hiệp khách cần đủ thực lực. Bạn có thể luyện cấp trong rừng hoặc bật Đồ Sát so tài cùng các Cao Thủ ngoài thành.',
+        target: new THREE.Vector3(16, 0, -6),
+        rewardGold: 800, rewardExp: 260
+      },
+      {
+        title: 'Chương 4: Huyết Chiến Ma Tôn',
+        desc: 'Tiến lên Huyết Chiến Đài phía Bắc, tiêu diệt Boss Huyết Ma Tôn!',
+        lore: 'Huyết Ma Tôn đang tọa trấn trên Huyết Chiến Đài với tuyệt kỹ Huyết Lôi AoE. Hãy né vòng tròn cảnh báo đỏ dưới chân và tung Lục Đao Tuyệt kết liễu hắn!',
+        target: new THREE.Vector3(0, 0, -45),
+        rewardGold: 2000, rewardExp: 600
+      }
+    ];
+
+    const MARKET_ITEMS = [
+      { id: 'w1', name: 'Thanh Long Bảo Đao', type: 'weapon', atk: 35, hp: 0, price: 450, rarity: 'Hiếm' },
+      { id: 'w2', name: 'Huyền Thiết Trọng Kiếm', type: 'weapon', atk: 68, hp: 0, price: 1100, rarity: 'Sử Thi' },
+      { id: 'w3', name: 'Lục Đao Chí Tôn Thần Binh', type: 'weapon', atk: 125, hp: 150, price: 2400, rarity: 'Thần Thoại' },
+      { id: 'a1', name: 'Kim Ti Nhuyễn Giáp', type: 'armor', atk: 0, hp: 450, price: 420, rarity: 'Hiếm' },
+      { id: 'a2', name: 'Huyền Vũ Chiến Khải', type: 'armor', atk: 15, hp: 950, price: 1200, rarity: 'Sử Thi' },
+      { id: 'p1', name: 'Cửu Chuyển Hoàn Hồn Đan', type: 'potion', atk: 0, hp: 0, price: 120, rarity: 'Đan Dược' }
+    ];
+
+    // ---------------------------------------------------------
+    // 2. KHỞI TẠO CẢNH 3D, ÁNH SÁNG & CAMERA (PHONG CÁCH TỐI ÁNH KIM)
+    // ---------------------------------------------------------
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070b14);
+    scene.fog = new THREE.FogExp2(0x070b14, 0.0115);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 260);
+    camera.position.set(0, 12, 48);
+
+    // Ánh sáng kiếm hiệp đêm huyền ảo + viền vàng ấm
+    const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e1b2e, 0.72);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffedd5, 1.45);
+    dirLight.position.set(32, 54, 28);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.camera.near = 5;
+    dirLight.shadow.camera.far = 160;
+    const dCam = 65;
+    dirLight.shadow.camera.left = -dCam;
+    dirLight.shadow.camera.right = dCam;
+    dirLight.shadow.camera.top = dCam;
+    dirLight.shadow.camera.bottom = -dCam;
+    scene.add(dirLight);
+
+    const bossLight = new THREE.PointLight(0xe11d48, 2.2, 42);
+    bossLight.position.set(0, 8, -45);
+    scene.add(bossLight);
+
+    // Biến điều khiển camera
+    let camYaw = 0;
+    let camShake = 0;
+    let isDraggingCam = false;
+    let lastMouseX = 0;
+
+    // ---------------------------------------------------------
+    // 3. TRẠNG THÁI GAME & NGƯỜI CHƠI
+    // ---------------------------------------------------------
+    let selectedSectIdx = 0;
+    let customGlbUrl = null;
+    let gameStarted = false;
+    let autoMode = false;
+    let pkMode = false;
+    let autoPathTarget = null;
+
+    let storyStep = 0;
+    let storyKills = 0;
+    let storyPkDone = false;
+    let storyCompleted = false;
+
+    const player = {
+      group: new THREE.Group(),
+      model: null,
+      mixer: null,
+      name: 'Độc Cô Cầu Bại',
+      sect: SECTS[0],
+      lv: 1,
+      exp: 0,
+      maxExp: 100,
+      gold: 500,
+      hp: 1200,
+      maxHp: 1200,
+      baseAtk: 52,
+      bonusAtk: 0,
+      bonusHp: 0,
+      speed: 9.2,
+      bag: [],
+      equippedWeapon: null,
+      equippedArmor: null,
+      skillCds: SKILLS.map(() => 0),
+      actionType: -1,
+      actionTime: 0,
+      actionDuration: 0
+    };
+    player.group.position.set(0, 0, 36);
+    scene.add(player.group);
+
+    // ---------------------------------------------------------
+    // 4. DỰNG KHUNG XƯƠNG NHÂN VẬT 3D PHÂN KHỚP NHƯ NGƯỜI THẬT
+    // ---------------------------------------------------------
+    function createHumanoidRig(robeColor, armorColor, weaponColor, scale = 1, isBoss = false) {
+      const g = new THREE.Group();
+      const matRobe = new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.62 });
+      const matDark = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75 });
+      const matArmor = new THREE.MeshStandardMaterial({ color: armorColor, metalness: 0.58, roughness: 0.28 });
+      const matSkin = new THREE.MeshStandardMaterial({ color: isBoss ? 0x6b21a8 : 0xf1c27d, roughness: 0.68 });
+      const matWeapon = new THREE.MeshStandardMaterial({
+        color: weaponColor, emissive: weaponColor, emissiveIntensity: 0.55, metalness: 0.8, roughness: 0.15
+      });
+
+      const hips = new THREE.Group();
+      hips.position.y = 1.02;
+      g.add(hips);
+
+      const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.28, 12), matArmor);
+      pelvis.castShadow = true;
+      hips.add(pelvis);
+
+      const torso = new THREE.Group();
+      torso.position.y = 0.14;
+      hips.add(torso);
+
+      const chestMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.28, 0.82, 12), matRobe);
+      chestMesh.position.y = 0.42;
+      chestMesh.castShadow = true;
+      torso.add(chestMesh);
+
+      const breastplate = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.48, 0.44), matArmor);
+      breastplate.position.set(0, 0.5, 0.03);
+      breastplate.castShadow = true;
+      torso.add(breastplate);
+
+      const capePivot = new THREE.Group();
+      capePivot.position.set(0, 0.78, -0.22);
+      const capeMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 1.18, 0.06),
+        new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.8, side: THREE.DoubleSide })
+      );
+      capeMesh.position.set(0, -0.58, -0.02);
+      capeMesh.castShadow = true;
+      capePivot.add(capeMesh);
+      torso.add(capePivot);
+
+      const headPivot = new THREE.Group();
+      headPivot.position.y = 0.92;
+      torso.add(headPivot);
+
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.18, 8), matSkin);
+      neck.position.y = 0.05;
+      headPivot.add(neck);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 16), matSkin);
+      head.position.y = 0.28;
+      head.castShadow = true;
+      headPivot.add(head);
+
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.285, 14, 14, 0, Math.PI * 2, 0, Math.PI * 0.58), matDark);
+      hair.position.set(0, 0.31, -0.02);
+      headPivot.add(hair);
+
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.34, 8), matArmor);
+      crown.position.y = 0.62;
+      headPivot.add(crown);
+
+      function buildArm(side, hasWeapon) {
+        const shoulder = new THREE.Group();
+        shoulder.position.set(side * 0.46, 0.76, 0);
+        torso.add(shoulder);
+
+        const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 10), matArmor);
+        shoulder.add(pauldron);
+
+        const upperArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.32, 6, 10), matRobe);
+        upperArm.position.y = -0.24;
+        upperArm.castShadow = true;
+        shoulder.add(upperArm);
+
+        const elbow = new THREE.Group();
+        elbow.position.y = -0.46;
+        shoulder.add(elbow);
+
+        const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.3, 6, 10), matArmor);
+        forearm.position.y = -0.22;
+        forearm.castShadow = true;
+        elbow.add(forearm);
+
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), matSkin);
+        hand.position.y = -0.42;
+        elbow.add(hand);
+
+        if (hasWeapon) {
+          const weaponGroup = new THREE.Group();
+          weaponGroup.position.set(0, -0.42, 0.08);
+
+          const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.42, 8), matDark);
+          hilt.rotation.x = Math.PI / 2;
+          weaponGroup.add(hilt);
+
+          const guard = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.08), matArmor);
+          guard.position.z = 0.2;
+          weaponGroup.add(guard);
+
+          const bladeLen = isBoss ? 2.55 : 1.65;
+          const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, bladeLen), matWeapon);
+          blade.position.set(0, 0.03, 0.22 + bladeLen / 2);
+          blade.castShadow = true;
+          weaponGroup.add(blade);
+
+          const tip = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 4), matWeapon);
+          tip.rotation.x = Math.PI / 2;
+          tip.rotation.y = Math.PI / 4;
+          tip.position.set(0, 0.03, 0.22 + bladeLen + 0.14);
+          weaponGroup.add(tip);
+
+          elbow.add(weaponGroup);
+        }
+        return { shoulder, elbow };
+      }
+
+      const leftArm = buildArm(-1, false);
+      const rightArm = buildArm(1, true);
+
+      function buildLeg(side) {
+        const hipJoint = new THREE.Group();
+        hipJoint.position.set(side * 0.2, -0.06, 0);
+        hips.add(hipJoint);
+
+        const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.34, 6, 10), matRobe);
+        thigh.position.y = -0.25;
+        thigh.castShadow = true;
+        hipJoint.add(thigh);
+
+        const knee = new THREE.Group();
+        knee.position.y = -0.5;
+        hipJoint.add(knee);
+
+        const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.34, 6, 10), matDark);
+        shin.position.y = -0.24;
+        shin.castShadow = true;
+        knee.add(shin);
+
+        const boot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.32), matArmor);
+        boot.position.set(0, -0.45, 0.06);
+        knee.add(boot);
+
+        return { hip: hipJoint, knee };
+      }
+
+      const leftLeg = buildLeg(-1);
+      const rightLeg = buildLeg(1);
+
+      g.userData = {
+        hips, torso, headPivot, capePivot,
+        leftArm, rightArm, leftLeg, rightLeg,
+        moveBlend: 0
+      };
+      g.scale.setScalar(scale);
+      return g;
+    }
+
+    // Hoạt ảnh phân khớp tự nhiên: thở nhẹ, chạy gập gối đánh tay, áo choàng bay, 6 thế võ
+    function updateHumanoidAnimation(model, dt, now, isMoving, actionType = -1, actionProgress = 0) {
+      if (!model) return;
+      if (!model.userData || !model.userData.hips) {
+        // Nếu là mô hình .glb ngoài không có rig tự dựng -> nhún chạy mượt
+        model.position.y = isMoving ? Math.abs(Math.sin(now * 11)) * 0.16 : Math.sin(now * 2.5) * 0.03;
+        model.rotation.x = isMoving ? 0.1 : 0;
+        return;
+      }
+
+      const r = model.userData;
+      r.moveBlend = THREE.MathUtils.lerp(r.moveBlend, isMoving ? 1 : 0, Math.min(1, dt * 11));
+      const b = r.moveBlend;
+
+      const runCycle = now * 11.5;
+      const sinC = Math.sin(runCycle);
+      const cosC = Math.cos(runCycle);
+      const idleBreath = Math.sin(now * 2.6);
+
+      r.hips.position.y = 1.02 + Math.abs(sinC) * 0.11 * b + idleBreath * 0.018 * (1 - b);
+      r.hips.rotation.y = sinC * 0.14 * b;
+      r.hips.rotation.z = cosC * 0.045 * b;
+
+      r.torso.rotation.x = 0.16 * b + idleBreath * 0.025 * (1 - b);
+      r.torso.rotation.y = -sinC * 0.18 * b;
+      r.torso.rotation.z = 0;
+
+      r.headPivot.rotation.x = -0.1 * b + idleBreath * 0.03;
+      r.headPivot.rotation.y = sinC * 0.08 * b;
+
+      r.capePivot.rotation.x = 0.12 + 0.58 * b + Math.sin(now * 9.5) * (0.08 + 0.16 * b);
+
+      r.leftLeg.hip.rotation.x = sinC * 0.78 * b;
+      r.rightLeg.hip.rotation.x = -sinC * 0.78 * b;
+      r.leftLeg.knee.rotation.x = Math.max(0, -cosC) * 0.95 * b + 0.08 * (1 - b);
+      r.rightLeg.knee.rotation.x = Math.max(0, cosC) * 0.95 * b + 0.08 * (1 - b);
+
+      r.leftArm.shoulder.rotation.x = -sinC * 0.65 * b - 0.15 * (1 - b);
+      r.leftArm.shoulder.rotation.z = -0.16 - 0.06 * idleBreath;
+      r.leftArm.elbow.rotation.x = -0.35 - 0.55 * b;
+
+      r.rightArm.shoulder.rotation.x = sinC * 0.55 * b - 0.28 * (1 - b);
+      r.rightArm.shoulder.rotation.z = 0.18 + 0.05 * idleBreath;
+      r.rightArm.elbow.rotation.x = -0.45 - 0.4 * b;
+
+      if (actionType >= 0 && actionProgress > 0 && actionProgress < 1) {
+        const p = actionProgress;
+        const swing = Math.sin(p * Math.PI);
+
+        if (actionType === 0) {
+          const slash = -1.2 + p * 2.5;
+          r.torso.rotation.y = -slash * 0.55;
+          r.torso.rotation.x = 0.24 * swing;
+          r.rightArm.shoulder.rotation.x = -1.25;
+          r.rightArm.shoulder.rotation.z = 0.9 - p * 1.9;
+          r.rightArm.elbow.rotation.x = -0.25;
+          r.leftArm.shoulder.rotation.x = 0.4 * swing;
+        } else if (actionType === 1) {
+          r.hips.rotation.y = p * Math.PI * 2;
+          r.torso.rotation.x = 0.25;
+          r.rightArm.shoulder.rotation.x = -1.45;
+          r.rightArm.shoulder.rotation.z = 1.25;
+          r.rightArm.elbow.rotation.x = -0.15;
+          r.leftArm.shoulder.rotation.z = -1.1;
+          r.capePivot.rotation.x = 0.95;
+        } else if (actionType === 2) {
+          r.torso.rotation.x = 0.48 * swing;
+          r.rightArm.shoulder.rotation.x = -1.55 * swing;
+          r.rightArm.elbow.rotation.x = -0.1;
+          r.leftArm.shoulder.rotation.x = 0.85 * swing;
+          r.capePivot.rotation.x = 1.1;
+        } else if (actionType === 3) {
+          r.hips.position.y += 0.14 * swing;
+          r.torso.rotation.x = -0.18 * swing;
+          r.leftArm.shoulder.rotation.x = -1.1 * swing;
+          r.leftArm.shoulder.rotation.z = -0.95 * swing;
+          r.rightArm.shoulder.rotation.x = -1.2 * swing;
+          r.rightArm.shoulder.rotation.z = 0.95 * swing;
+        } else if (actionType === 4) {
+          r.hips.position.y += Math.sin(p * Math.PI) * 0.65;
+          const slam = p < 0.45 ? -2.4 * (p / 0.45) : -2.4 + ((p - 0.45) / 0.55) * 3.1;
+          r.torso.rotation.x = p < 0.45 ? -0.3 : 0.45;
+          r.rightArm.shoulder.rotation.x = slam;
+          r.rightArm.elbow.rotation.x = -0.2;
+          r.leftArm.shoulder.rotation.x = slam * 0.7;
+        } else if (actionType === 5) {
+          r.hips.position.y += swing * 0.85;
+          r.torso.rotation.x = -0.22 * swing;
+          r.torso.rotation.y = Math.sin(p * Math.PI * 2) * 0.4;
+          r.rightArm.shoulder.rotation.x = -2.6 * swing;
+          r.leftArm.shoulder.rotation.x = -2.1 * swing;
+          r.leftArm.shoulder.rotation.z = -0.7 * swing;
+          r.capePivot.rotation.x = 1.15;
+        }
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 5. XÂY DỰNG BẢN ĐỒ 3 KHU VỰC (LƯỚI ÁNH KIM + 65 CÂY CỔ THỤ)
+    // ---------------------------------------------------------
+    let npcElder = null;
+
+    function buildWorld() {
+      // Nền tối kiếm hiệp sang trọng + lưới ánh kim như bản hồi sáng
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(160, 160),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9, metalness: 0.15 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const grid = new THREE.GridHelper(156, 52, 0xd97706, 0x1e293b);
+      grid.position.y = 0.03;
+      grid.material.opacity = 0.38;
+      grid.material.transparent = true;
+      scene.add(grid);
+
+      // Con đường đá ánh kim chạy dọc 3 khu vực
+      const road = new THREE.Mesh(
+        new THREE.BoxGeometry(7.5, 0.08, 124),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, metalness: 0.25 })
+      );
+      road.position.set(0, 0.04, -4);
+      road.receiveShadow = true;
+      scene.add(road);
+
+      // --- KHU 1: THÀNH LẠC DƯƠNG (z > 20, Khu An Toàn) ---
+      const townFloor = new THREE.Mesh(
+        new THREE.CylinderGeometry(18, 18.5, 0.2, 32),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65, metalness: 0.3 })
+      );
+      townFloor.position.set(0, 0.1, 35);
+      townFloor.receiveShadow = true;
+      scene.add(townFloor);
+
+      const townRing = new THREE.Mesh(
+        new THREE.RingGeometry(17.5, 18.4, 48),
+        new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, transparent: true, opacity: 0.65 })
+      );
+      townRing.rotation.x = -Math.PI / 2;
+      townRing.position.set(0, 0.22, 35);
+      scene.add(townRing);
+
+      // Đình Lạc Dương (4 cột son + mái ngói cong)
+      const pavMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.45, roughness: 0.35 });
+      [[-4, 44], [4, 44], [-4, 52], [4, 52]].forEach(([px, pz]) => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.42, 5.4, 12), pavMat);
+        col.position.set(px, 2.7, pz);
+        col.castShadow = true;
+        scene.add(col);
+      });
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(7.8, 3.2, 4), roofMat);
+      roof.position.set(0, 6.8, 48);
+      roof.rotation.y = Math.PI / 4;
+      roof.castShadow = true;
+      scene.add(roof);
+
+      // Đèn đá dẫn đường dọc trục chính
+      for (let z = -30; z <= 32; z += 12) {
+        [-4.8, 4.8].forEach(lx => {
+          const post = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.24, 2.6, 8),
+            new THREE.MeshStandardMaterial({ color: 0x334155 })
+          );
+          post.position.set(lx, 1.3, z);
+          scene.add(post);
+          const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.28, 10, 10),
+            new THREE.MeshBasicMaterial({ color: z > 20 ? 0x34d399 : z < -20 ? 0xf43f5e : 0xfbbf24 })
+          );
+          orb.position.set(lx, 2.75, z);
+          scene.add(orb);
+        });
+      }
+
+      // NPC Trưởng Lão Lạc Dương
+      npcElder = createHumanoidRig(0x0f766e, 0xfbbf24, 0x34d399, 1.08, false);
+      npcElder.position.set(0, 0.2, 29);
+      npcElder.rotation.y = 0;
+      scene.add(npcElder);
+
+      const npcHalo = new THREE.Mesh(
+        new THREE.RingGeometry(0.9, 1.25, 24),
+        new THREE.MeshBasicMaterial({ color: 0x34d399, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      );
+      npcHalo.rotation.x = -Math.PI / 2;
+      npcHalo.position.set(0, 0.25, 29);
+      scene.add(npcHalo);
+
+      // --- KHU 2: RỪNG U MINH (65 CÂY CỔ THỤ + ĐÁ TẢNG) ---
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.9 });
+      let seed = 2026;
+      const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+
+      let trees = 0;
+      let tries = 0;
+      while (trees < 65 && tries < 600) {
+        tries++;
+        const tx = (rand() - 0.5) * 136;
+        const tz = (rand() - 0.5) * 124;
+        if (Math.abs(tx) < 6.8) continue;
+        if (Math.hypot(tx, tz - 35) < 21) continue;
+        if (Math.hypot(tx, tz + 45) < 19) continue;
+
+        const sc = 0.85 + rand() * 0.7;
+        const tree = new THREE.Group();
+        tree.position.set(tx, 0, tz);
+
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32 * sc, 0.48 * sc, 3.6 * sc, 8), trunkMat);
+        trunk.position.y = 1.8 * sc;
+        trunk.castShadow = true;
+        tree.add(trunk);
+
+        const leafHex = tz < -20 ? 0x3b0764 : (rand() > 0.5 ? 0x14532d : 0x065f46);
+        const leafMat = new THREE.MeshStandardMaterial({ color: leafHex, roughness: 0.82 });
+
+        const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(2.1 * sc, 0), leafMat);
+        crown1.position.set(0, 4.1 * sc, 0);
+        crown1.castShadow = true;
+        tree.add(crown1);
+
+        const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.45 * sc, 0), leafMat);
+        crown2.position.set(0.5 * sc, 5.4 * sc, -0.3 * sc);
+        tree.add(crown2);
+
+        scene.add(tree);
+        trees++;
+      }
+
+      // Đá tảng rải rác
+      const rockMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+      for (let i = 0; i < 24; i++) {
+        const rx = (rand() - 0.5) * 120;
+        const rz = (rand() - 0.5) * 100;
+        if (Math.abs(rx) < 6 || Math.hypot(rx, rz - 35) < 20 || Math.hypot(rx, rz + 45) < 18) continue;
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.9 + rand() * 1.1, 0), rockMat);
+        rock.position.set(rx, 0.5, rz);
+        rock.scale.set(1.2, 0.7, 1.0);
+        rock.rotation.y = rand() * Math.PI;
+        scene.add(rock);
+      }
+
+      // --- KHU 3: HUYẾT CHIẾN ĐÀI (z < -25, ĐẤU BOSS MA TÔN) ---
+      const arena = new THREE.Mesh(
+        new THREE.CylinderGeometry(16, 17, 0.35, 36),
+        new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.6, metalness: 0.35 })
+      );
+      arena.position.set(0, 0.17, -45);
+      arena.receiveShadow = true;
+      scene.add(arena);
+
+      const arenaRing = new THREE.Mesh(
+        new THREE.RingGeometry(15.2, 16.2, 48),
+        new THREE.MeshBasicMaterial({ color: 0xe11d48, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+      );
+      arenaRing.rotation.x = -Math.PI / 2;
+      arenaRing.position.set(0, 0.37, -45);
+      scene.add(arenaRing);
+
+      [[-11, -34], [11, -34], [-11, -56], [11, -56]].forEach(([px, pz]) => {
+        const pillar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.8, 1.0, 6.5, 10),
+          new THREE.MeshStandardMaterial({ color: 0x7f1d1d, metalness: 0.4, roughness: 0.4 })
+        );
+        pillar.position.set(px, 3.25, pz);
+        pillar.castShadow = true;
+        scene.add(pillar);
+
+        const crystal = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.85, 0),
+          new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+        );
+        crystal.position.set(px, 7.2, pz);
+        scene.add(crystal);
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 6. QUÁI VẬT, BOSS MA TÔN (CÓ VÒNG CẢNH BÁO ĐỎ) & CAO THỦ PK
+    // ---------------------------------------------------------
+    const enemies = [];
+    const pkRivals = [];
+    const vfxList = [];
+
+    function spawnEnemiesAndRivals() {
+      // 10 Quái thường trong Rừng U Minh
+      const mobConfigs = [
+        { name: 'Yêu Lang', color: 0x475569, hp: 280, atk: 24, gold: 45, exp: 35 },
+        { name: 'Hắc Y Ma Binh', color: 0x581c87, hp: 360, atk: 32, gold: 65, exp: 48 }
+      ];
+      for (let i = 0; i < 10; i++) {
+        const cfg = mobConfigs[i % 2];
+        const angle = (i / 10) * Math.PI * 2;
+        const mx = Math.cos(angle) * (14 + (i % 3) * 7);
+        const mz = -2 + Math.sin(angle) * 14;
+
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.55, 0.9, 6, 10),
+          new THREE.MeshStandardMaterial({ color: cfg.color, roughness: 0.6 })
+        );
+        body.position.y = 1.0;
+        body.castShadow = true;
+        g.add(body);
+
+        const eyes = new THREE.Mesh(
+          new THREE.BoxGeometry(0.45, 0.14, 0.15),
+          new THREE.MeshBasicMaterial({ color: 0xef4444 })
+        );
+        eyes.position.set(0, 1.45, 0.48);
+        g.add(eyes);
+
+        g.position.set(mx, 0, mz);
+        scene.add(g);
+
+        enemies.push({
+          group: g, name: cfg.name, isBoss: false,
+          homeX: mx, homeZ: mz, hp: cfg.hp, maxHp: cfg.hp,
+          atk: cfg.atk, speed: 4.8, gold: cfg.gold, exp: cfg.exp,
+          atkCd: 0, deadTimer: 0, swingAnim: 0
+        });
+      }
+
+      // BOSS HUYẾT MA TÔN tại Huyết Chiến Đài
+      const bossModel = createHumanoidRig(0x4c0519, 0x9f1239, 0xf43f5e, 1.75, true);
+      bossModel.position.set(0, 0.35, -45);
+      scene.add(bossModel);
+
+      // Vòng cảnh báo đỏ dưới chân Boss khi tụ chiêu AoE
+      const aoeWarn = new THREE.Mesh(
+        new THREE.RingGeometry(0.4, 9.5, 36),
+        new THREE.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+      );
+      aoeWarn.rotation.x = -Math.PI / 2;
+      aoeWarn.position.set(0, 0.42, -45);
+      aoeWarn.visible = false;
+      scene.add(aoeWarn);
+
+      enemies.push({
+        group: bossModel, name: 'Huyết Ma Tôn', isBoss: true,
+        homeX: 0, homeZ: -45, hp: 5000, maxHp: 5000,
+        atk: 78, speed: 5.2, gold: 800, exp: 350,
+        atkCd: 0, deadTimer: 0, swingAnim: 0,
+        aoeCd: 6.5, aoeCharging: 0, aoeWarn
+      });
+
+      // 3 Cao Thủ Giang Hồ (PK khi bật Đồ Sát)
+      const rivalSpecs = [
+        { name: 'Bắc Kiều Phong', robe: 0x7c2d12, armor: 0xf59e0b, x: 18, z: -6 },
+        { name: 'Tây Độc Âu Dương', robe: 0x3b0764, armor: 0xc084fc, x: -18, z: -10 },
+        { name: 'Đông Tà Hoàng Dược', robe: 0x064e3b, armor: 0x2dd4bf, x: 15, z: -20 }
+      ];
+      rivalSpecs.forEach((sp, idx) => {
+        const rvModel = createHumanoidRig(sp.robe, sp.armor, 0xe879f9, 1.06, false);
+        rvModel.position.set(sp.x, 0, sp.z);
+        scene.add(rvModel);
+        pkRivals.push({
+          group: rvModel, name: sp.name, homeX: sp.x, homeZ: sp.z,
+          hp: 1450, maxHp: 1450, atk: 54, speed: 6.8,
+          atkCd: 0, deadTimer: 0, swingAnim: 0, wanderAng: idx * 2.1
+        });
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 7. HIỆU ỨNG KỸ NĂNG 3D HOÀNH TRÁNG + SỐ SÁT THƯƠNG BAY LÊN
+    // ---------------------------------------------------------
+    function spawnFloatingText(worldPos, text, color = '#fde047', size = '18px') {
+      const p = worldPos.clone();
+      p.y += 2.2;
+      p.project(camera);
+      if (p.z > 1) return;
+      const sx = (p.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-p.y * 0.5 + 0.5) * window.innerHeight;
+      const el = document.createElement('div');
+      el.className = 'floating-dmg';
+      el.style.left = `${sx + (Math.random() - 0.5) * 28}px`;
+      el.style.top = `${sy}px`;
+      el.style.color = color;
+      el.style.fontSize = size;
+      el.textContent = text;
+      document.getElementById('dmg-layer').appendChild(el);
+      setTimeout(() => el.remove(), 860);
+    }
+
+    function spawnVFX(x, y, z, radius, color, isRing) {
+      const geo = isRing
+        ? new THREE.RingGeometry(0.3, radius, 28)
+        : new THREE.SphereGeometry(radius * 0.45, 10, 10);
+      const mat = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.85, side: THREE.DoubleSide
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      if (isRing) mesh.rotation.x = -Math.PI / 2;
+      scene.add(mesh);
+      vfxList.push({ mesh, life: 0.38, maxLife: 0.38, kind: isRing ? 'ring' : 'orb' });
+    }
+
+    function spawnHitSparks(x, y, z, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        const spark = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.14, 0),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
+        );
+        spark.position.set(x, y, z);
+        scene.add(spark);
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 4 + Math.random() * 6;
+        vfxList.push({
+          mesh: spark,
+          life: 0.32 + Math.random() * 0.18,
+          maxLife: 0.5,
+          kind: 'particle',
+          vel: new THREE.Vector3(Math.cos(ang) * spd, 3.5 + Math.random() * 4.5, Math.sin(ang) * spd)
+        });
+      }
+    }
+
+    function spawnSkillVFX(skillIdx, pos, rotY, range, color) {
+      const fwd = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY));
+
+      if (skillIdx === 0) {
+        const arc = new THREE.Mesh(
+          new THREE.RingGeometry(range * 0.45, range * 0.85, 24, 1, -Math.PI * 0.42, Math.PI * 0.84),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
+        );
+        arc.position.set(pos.x, 1.35, pos.z);
+        arc.rotation.x = -Math.PI / 2;
+        arc.rotation.z = rotY - Math.PI / 2;
+        scene.add(arc);
+        vfxList.push({ mesh: arc, life: 0.28, maxLife: 0.28, kind: 'slash', spin: 9 });
+        spawnHitSparks(pos.x + fwd.x * 2, 1.3, pos.z + fwd.z * 2, color, 7);
+
+      } else if (skillIdx === 1) {
+        for (let k = 0; k < 3; k++) {
+          const torus = new THREE.Mesh(
+            new THREE.TorusGeometry(range * (0.45 + k * 0.18), 0.11, 8, 32, Math.PI * 1.45),
+            new THREE.MeshBasicMaterial({ color: k === 1 ? 0xffffff : color, transparent: true, opacity: 0.9 })
+          );
+          torus.position.set(pos.x, 0.7 + k * 0.55, pos.z);
+          torus.rotation.x = Math.PI / 2;
+          torus.rotation.z = k * 2.1;
+          scene.add(torus);
+          vfxList.push({ mesh: torus, life: 0.55, maxLife: 0.55, kind: 'spinRing', spin: 16 - k * 2 });
+        }
+
+      } else if (skillIdx === 2) {
+        for (let k = 0; k < 5; k++) {
+          const ghost = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.45, 0.65, 2.2, 10),
+            new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 - k * 0.08 })
+          );
+          ghost.position.set(pos.x - fwd.x * k * 1.25, 1.1, pos.z - fwd.z * k * 1.25);
+          scene.add(ghost);
+          vfxList.push({ mesh: ghost, life: 0.32 + k * 0.04, maxLife: 0.5, kind: 'fade' });
+        }
+        spawnVFX(pos.x, 0.35, pos.z, range * 0.75, color, true);
+
+      } else if (skillIdx === 3) {
+        const aura = new THREE.Mesh(
+          new THREE.CylinderGeometry(2.1, 2.1, 3.6, 20, 1, true),
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+        );
+        aura.position.set(pos.x, 1.8, pos.z);
+        scene.add(aura);
+        vfxList.push({ mesh: aura, life: 0.85, maxLife: 0.85, kind: 'pillar', spin: 5 });
+
+        for (let k = 0; k < 14; k++) {
+          const ang = (k / 14) * Math.PI * 2;
+          const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.14, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xbef264, transparent: true, opacity: 0.95 })
+          );
+          orb.position.set(pos.x + Math.cos(ang) * 1.9, 0.3 + Math.random(), pos.z + Math.sin(ang) * 1.9);
+          scene.add(orb);
+          vfxList.push({
+            mesh: orb, life: 0.85, maxLife: 0.85, kind: 'particle',
+            vel: new THREE.Vector3(0, 3.8 + Math.random() * 2, 0), noGravity: true
+          });
+        }
+
+      } else if (skillIdx === 4) {
+        spawnVFX(pos.x, 0.3, pos.z, range * 0.95, 0xf97316, true);
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2;
+          const fx = pos.x + Math.cos(ang) * (range * 0.55);
+          const fz = pos.z + Math.sin(ang) * (range * 0.55);
+          const flame = new THREE.Mesh(
+            new THREE.ConeGeometry(1.15, 4.8, 8),
+            new THREE.MeshBasicMaterial({ color: k % 2 === 0 ? 0xef4444 : 0xfacc15, transparent: true, opacity: 0.88 })
+          );
+          flame.position.set(fx, 2.2, fz);
+          scene.add(flame);
+          vfxList.push({ mesh: flame, life: 0.65, maxLife: 0.65, kind: 'pillar', spin: 7 });
+        }
+        spawnHitSparks(pos.x, 1.5, pos.z, 0xfacc15, 16);
+
+      } else if (skillIdx === 5) {
+        spawnVFX(pos.x, 0.35, pos.z, range, 0xc084fc, true);
+        spawnVFX(pos.x, 0.4, pos.z, range * 0.65, 0xfde047, true);
+        for (let k = 0; k < 6; k++) {
+          const ang = (k / 6) * Math.PI * 2 + rotY;
+          const dist = range * 0.58;
+          const swordGroup = new THREE.Group();
+          const sBlade = new THREE.Mesh(
+            new THREE.BoxGeometry(0.32, 4.4, 0.75),
+            new THREE.MeshBasicMaterial({ color: k % 2 === 0 ? 0xc084fc : 0xfde047, transparent: true, opacity: 0.95 })
+          );
+          const sCross = new THREE.Mesh(
+            new THREE.BoxGeometry(1.4, 0.28, 0.35),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 })
+          );
+          sCross.position.y = 2.0;
+          swordGroup.add(sBlade, sCross);
+          swordGroup.position.set(pos.x + Math.cos(ang) * dist, 11.5, pos.z + Math.sin(ang) * dist);
+          swordGroup.rotation.y = -ang;
+          scene.add(swordGroup);
+          vfxList.push({ mesh: swordGroup, life: 0.95, maxLife: 0.95, kind: 'skyBlade', targetY: 2.0 });
+        }
+        spawnHitSparks(pos.x, 2.0, pos.z, 0xe879f9, 22);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 8. CHIẾN ĐẤU, RỚT ĐỒ, LÊN CẤP & CỐT TRUYỆN
+    // ---------------------------------------------------------
+    function showToast(msg) {
+      const box = document.getElementById('toast-box');
+      const el = document.createElement('div');
+      el.className = 'glass-panel px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-amber-200 border-amber-400/60 shadow-lg';
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 2500);
+    }
+
+    function dropRandomItem(isHighTier = false) {
+      const pool = isHighTier
+        ? [
+            { name: 'Thần Đao Phá Thiên', type: 'weapon', atk: 88, hp: 0, price: 650, rarity: 'Sử Thi' },
+            { name: 'Long Lân Chiến Giáp', type: 'armor', atk: 12, hp: 720, price: 600, rarity: 'Sử Thi' }
+          ]
+        : [
+            { name: 'Tinh Thiết Đao', type: 'weapon', atk: 22, hp: 0, price: 180, rarity: 'Thường' },
+            { name: 'Bạch Ngân Hộ Giáp', type: 'armor', atk: 0, hp: 280, price: 160, rarity: 'Thường' },
+            { name: 'Huyết Long Kiếm', type: 'weapon', atk: 42, hp: 0, price: 360, rarity: 'Hiếm' }
+          ];
+      const item = { ...pool[Math.floor(Math.random() * pool.length)], uid: Date.now() + Math.random() };
+      player.bag.push(item);
+      showToast(`🎁 Nhặt được [${item.rarity}] ${item.name}!`);
+      updateHUD();
+    }
+
+    function gainExp(amount) {
+      player.exp += amount;
+      while (player.exp >= player.maxExp) {
+        player.exp -= player.maxExp;
+        player.lv++;
+        player.maxExp = Math.round(player.maxExp * 1.45);
+        player.baseAtk += 10;
+        player.maxHp += 180;
+        player.hp = player.maxHp;
+        spawnSkillVFX(3, player.group.position, 0, 5, 0xfde047);
+        showToast(`🎉 Đột phá Cấp ${player.lv}! Toàn bộ chỉ số tăng mạnh!`);
+        checkStoryProgress();
+      }
+      updateHUD();
+    }
+
+    function applyDamageToPlayer(dmg) {
+      player.hp = Math.max(0, player.hp - dmg);
+      spawnFloatingText(player.group.position, `-${dmg}`, '#f43f5e', '16px');
+      if (player.hp <= 0) {
+        player.group.position.set(0, 0, 36);
+        player.hp = player.maxHp;
+        autoPathTarget = null;
+        showToast('💀 Bạn đã trọng thương và được đưa về Thành Lạc Dương hồi phục!');
+      }
+      updateHUD();
+    }
+
+    function completeStoryChapter() {
+      const ch = STORY_CHAPTERS[storyStep];
+      player.gold += ch.rewardGold;
+      gainExp(ch.rewardExp);
+      showToast(`📜 Hoàn thành ${ch.title}! (+${ch.rewardGold} Vàng)`);
+      storyStep++;
+      if (storyStep >= STORY_CHAPTERS.length) {
+        storyCompleted = true;
+        showToast('🏆 CHÚC MỪNG! Bạn đã thống lĩnh thiên hạ, hoàn thành toàn bộ Cốt Truyện!');
+      }
+      updateHUD();
+    }
+
+    function checkStoryProgress() {
+      if (storyCompleted) return;
+      if (storyStep === 1 && storyKills >= 5) completeStoryChapter();
+      else if (storyStep === 2 && (player.lv >= 3 || storyPkDone)) completeStoryChapter();
+    }
+
+    function castSkill(i) {
+      if (!gameStarted || player.skillCds[i] > 0) return;
+      const s = SKILLS[i];
+      player.skillCds[i] = s.cd;
+      player.actionType = i;
+      player.actionTime = 0;
+      player.actionDuration = i === 5 ? 0.72 : i === 4 ? 0.56 : i === 1 ? 0.48 : 0.36;
+
+      if (i === 4) camShake = 0.32;
+      if (i === 5) camShake = 0.58;
+      if (i === 1 || i === 2) camShake = 0.16;
+
+      if (s.dash > 0) {
+        const fwd = new THREE.Vector3(Math.sin(player.group.rotation.y), 0, Math.cos(player.group.rotation.y));
+        player.group.position.addScaledVector(fwd, s.dash);
+        player.group.position.x = THREE.MathUtils.clamp(player.group.position.x, -72, 72);
+        player.group.position.z = THREE.MathUtils.clamp(player.group.position.z, -72, 72);
+      }
+
+      if (s.heal > 0) {
+        const healAmt = Math.round(player.maxHp * s.heal);
+        player.hp = Math.min(player.maxHp, player.hp + healAmt);
+        spawnFloatingText(player.group.position, `+${healAmt} HP`, '#4ade80', '17px');
+        showToast(`💚 Hộ Thể hồi +${healAmt} Máu!`);
+      }
+
+      spawnSkillVFX(i, player.group.position, player.group.rotation.y, s.range, s.color);
+
+      const dmg = Math.round((player.baseAtk + player.bonusAtk) * s.mult * (0.92 + Math.random() * 0.16));
+
+      enemies.forEach(en => {
+        if (en.deadTimer > 0) return;
+        const dist = en.group.position.distanceTo(player.group.position);
+        if (dist <= s.range + (en.isBoss ? 1.9 : 0.9)) {
+          en.hp = Math.max(0, en.hp - dmg);
+          spawnHitSparks(en.group.position.x, 1.4, en.group.position.z, s.color, 6);
+          spawnFloatingText(en.group.position, `-${dmg}`, i === 5 ? '#e879f9' : '#fde047', i >= 4 ? '22px' : '17px');
+          if (en.hp <= 0) {
+            en.deadTimer = en.isBoss ? 22 : 8;
+            en.group.visible = false;
+            if (en.aoeWarn) en.aoeWarn.visible = false;
+            player.gold += en.gold;
+            gainExp(en.exp);
+            showToast(`⚔️ Hạ gục ${en.name}! +${en.gold} Vàng, +${en.exp} EXP`);
+            if (en.isBoss || Math.random() < 0.45) dropRandomItem(en.isBoss);
+            if (!en.isBoss && storyStep === 1) {
+              storyKills++;
+              checkStoryProgress();
+            }
+            if (en.isBoss && storyStep === 3) {
+              completeStoryChapter();
+            }
+          }
+        }
+      });
+
+      if (pkMode && player.group.position.z <= 20) {
+        pkRivals.forEach(rv => {
+          if (rv.deadTimer > 0) return;
+          if (rv.group.position.distanceTo(player.group.position) <= s.range + 1.1) {
+            rv.hp = Math.max(0, rv.hp - dmg);
+            spawnHitSparks(rv.group.position.x, 1.5, rv.group.position.z, 0xf43f5e, 8);
+            spawnFloatingText(rv.group.position, `PK -${dmg}`, '#fb7185', '20px');
+            if (rv.hp <= 0) {
+              rv.deadTimer = 18;
+              rv.group.visible = false;
+              player.gold += 350;
+              gainExp(150);
+              dropRandomItem(true);
+              showToast(`🔥 PK THẮNG LỢI! Hạ gục Cao Thủ ${rv.name}!`);
+              storyPkDone = true;
+              checkStoryProgress();
+            }
+          }
+        });
+      }
+      updateHUD();
+    }
+
+    // ---------------------------------------------------------
+    // 9. GIAO DIỆN CHỌN PHÁI, MODAL (TÚI, CHỢ, BẢN ĐỒ, CỐT TRUYỆN)
+    // ---------------------------------------------------------
+    function renderSectCards() {
+      const grid = document.getElementById('sect-grid');
+      grid.innerHTML = SECTS.map((s, idx) => `
+        <button data-sect="${idx}" class="sect-card text-left p-3 rounded-xl border transition cursor-pointer ${
+          idx === selectedSectIdx
+            ? 'bg-amber-500/20 border-amber-400 shadow-lg shadow-amber-500/20'
+            : 'bg-slate-900/75 border-slate-700/80 hover:border-amber-500/50'
+        }">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xl">${s.icon}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-300">${s.weapon}</span>
+          </div>
+          <div class="font-extrabold text-sm sm:text-base text-amber-200">${s.name}</div>
+          <p class="text-[11px] text-slate-300 leading-snug mt-0.5 line-clamp-2">${s.desc}</p>
+          <div class="flex items-center gap-2 mt-2 text-[10px] font-bold text-slate-200">
+            <span class="text-rose-400">❤️ ${s.hp}</span>
+            <span class="text-amber-400">⚔️ ${s.atk}</span>
+            <span class="text-sky-400">⚡ ${s.speed}</span>
+          </div>
+        </button>
+      `).join('');
+
+      grid.querySelectorAll('.sect-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedSectIdx = Number(btn.dataset.sect);
+          renderSectCards();
+        });
+      });
+    }
+
+    function openModal(title, htmlContent) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-body').innerHTML = htmlContent;
+      const bd = document.getElementById('modal-backdrop');
+      bd.classList.remove('hidden');
+      bd.classList.add('flex');
+    }
+
+    function closeModal() {
+      const bd = document.getElementById('modal-backdrop');
+      bd.classList.add('hidden');
+      bd.classList.remove('flex');
+    }
+
+    function openBagModal() {
+      const eqW = player.equippedWeapon ? `${player.equippedWeapon.name} (+${player.equippedWeapon.atk} Công)` : 'Chưa trang bị';
+      const eqA = player.equippedArmor ? `${player.equippedArmor.name} (+${player.equippedArmor.hp} Máu)` : 'Chưa trang bị';
+      let itemsHtml = player.bag.length === 0
+        ? `<div class="text-center py-6 text-slate-400">Túi đồ đang trống. Hãy đánh quái, săn Boss hoặc mua tại Chợ!</div>`
+        : player.bag.map((it, idx) => `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-slate-700/80">
+            <div>
+              <div class="font-bold text-amber-200">[${it.rarity}] ${it.name}</div>
+              <div class="text-xs text-slate-400">${it.atk ? `+${it.atk} Công ` : ''}${it.hp ? `+${it.hp} Máu` : ''} • Bán: ${Math.round(it.price * 0.6)} Vàng</div>
+            </div>
+            <div class="flex gap-1.5">
+              <button data-equip="${idx}" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold cursor-pointer">Mặc</button>
+              <button data-sell="${idx}" class="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-xs font-bold cursor-pointer">Bán</button>
+            </div>
+          </div>
+        `).join('');
+
+      openModal('🎒 Túi Đồ & Trang Bị', `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs">
+          <div>⚔️ Vũ khí đang dùng: <b class="text-amber-300">${eqW}</b></div>
+          <div>🛡️ Chiến giáp đang dùng: <b class="text-emerald-300">${eqA}</b></div>
+        </div>
+        <div class="space-y-2">${itemsHtml}</div>
+      `);
+
+      document.querySelectorAll('[data-equip]').forEach(b => {
+        b.addEventListener('click', () => {
+          const idx = Number(b.dataset.equip);
+          const item = player.bag.splice(idx, 1)[0];
+          if (item.type === 'weapon') {
+            if (player.equippedWeapon) player.bag.push(player.equippedWeapon);
+            player.equippedWeapon = item;
+          } else {
+            if (player.equippedArmor) player.bag.push(player.equippedArmor);
+            player.equippedArmor = item;
+          }
+          recalcStats();
+          showToast(`✨ Đã trang bị ${item.name}!`);
+          openBagModal();
+        });
+      });
+
+      document.querySelectorAll('[data-sell]').forEach(b => {
+        b.addEventListener('click', () => {
+          const idx = Number(b.dataset.sell);
+          const item = player.bag.splice(idx, 1)[0];
+          const val = Math.round(item.price * 0.6);
+          player.gold += val;
+          showToast(`💰 Đã bán ${item.name} nhận +${val} Vàng!`);
+          updateHUD();
+          openBagModal();
+        });
+      });
+    }
+
+    function openMarketModal() {
+      const listHtml = MARKET_ITEMS.map((m, idx) => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 border border-amber-500/25">
+          <div>
+            <div class="font-bold text-amber-200">[${m.rarity}] ${m.name}</div>
+            <div class="text-xs text-slate-300">
+              ${m.type === 'potion' ? 'Hồi phục 100% Sinh Lực ngay lập tức' : `${m.atk ? `+${m.atk} Công ` : ''}${m.hp ? `+${m.hp} Máu` : ''}`}
+            </div>
+          </div>
+          <button data-buy="${idx}" class="gold-btn px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
+            💰 ${m.price}
+          </button>
+        </div>
+      `).join('');
+
+      openModal('🏪 Chợ Giao Dịch Tự Do', `
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900 border border-yellow-500/40 text-xs">
+          <span>Vàng hiện có của bạn:</span>
+          <b class="text-yellow-400 text-sm">💰 ${player.gold} Vàng</b>
+        </div>
+        <div class="space-y-2">${listHtml}</div>
+      `);
+
+      document.querySelectorAll('[data-buy]').forEach(b => {
+        b.addEventListener('click', () => {
+          const item = MARKET_ITEMS[Number(b.dataset.buy)];
+          if (player.gold < item.price) {
+            showToast('⚠️ Không đủ Vàng! Hãy đánh quái hoặc bán đồ trong túi.');
+            return;
+          }
+          player.gold -= item.price;
+          if (item.type === 'potion') {
+            player.hp = player.maxHp;
+            showToast('💚 Đã dùng Cửu Chuyển Hoàn Hồn Đan, hồi đầy 100% Máu!');
+          } else {
+            player.bag.push({ ...item, uid: Date.now() + Math.random() });
+            showToast(`🛍️ Đã mua ${item.name} (đưa vào Túi Đồ)!`);
+          }
+          updateHUD();
+          openMarketModal();
+        });
+      });
+    }
+
+    function openWorldMapModal() {
+      const zones = [
+        { name: '🏯 Thành Lạc Dương (Khu An Toàn)', desc: 'Nơi Trưởng Lão tọa trấn, hồi phục miễn phí, cấm PK.', pos: [0, 36], color: 'border-emerald-500/50' },
+        { name: '🌲 Rừng U Minh (Bãi Quái & PK)', desc: 'Hơn 60 cây cổ thụ, Yêu Lang, Hắc Y Ma Binh và Cao Thủ Giang Hồ.', pos: [0, 4], color: 'border-amber-500/50' },
+        { name: '🔥 Huyết Chiến Đài (Hang Boss Ma Tôn)', desc: 'Khu vực cực kỳ nguy hiểm! Boss Huyết Ma Tôn rơi Thần Binh.', pos: [0, -32], color: 'border-rose-500/50' }
+      ];
+      openModal('🗺️ Bản Đồ Thế Giới & Dịch Chuyển Nhanh', `
+        <div class="space-y-2.5">
+          ${zones.map((z, idx) => `
+            <div class="p-3 rounded-xl bg-slate-900/85 border ${z.color} flex items-center justify-between gap-3">
+              <div>
+                <div class="font-bold text-amber-200">${z.name}</div>
+                <div class="text-xs text-slate-300 mt-0.5">${z.desc}</div>
+              </div>
+              <button data-tp="${idx}" class="gold-btn px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 cursor-pointer">Dịch chuyển</button>
+            </div>
+          `).join('')}
+        </div>
+      `);
+      document.querySelectorAll('[data-tp]').forEach(b => {
+        b.addEventListener('click', () => {
+          const z = zones[Number(b.dataset.tp)];
+          player.group.position.set(z.pos[0], 0, z.pos[1]);
+          autoPathTarget = null;
+          if (z.pos[1] > 20) player.hp = player.maxHp;
+          spawnSkillVFX(3, player.group.position, 0, 4, 0x38bdf8);
+          showToast(`✨ Đã dịch chuyển đến ${z.name}`);
+          closeModal();
+          updateHUD();
+        });
+      });
+    }
+
+    function openStoryModal() {
+      const html = STORY_CHAPTERS.map((ch, idx) => {
+        const done = storyCompleted || idx < storyStep;
+        const active = !storyCompleted && idx === storyStep;
+        return `
+          <div class="p-3 rounded-xl border ${
+            done ? 'bg-emerald-950/35 border-emerald-500/40' : active ? 'bg-amber-950/40 border-amber-400' : 'bg-slate-900/60 border-slate-800 opacity-65'
+          }">
+            <div class="flex items-center justify-between font-bold text-sm ${done ? 'text-emerald-300' : 'text-amber-300'}">
+              <span>${ch.title}</span>
+              <span class="text-xs">${done ? '✅ Hoàn thành' : active ? '🔥 Đang làm' : '🔒 Chưa mở'}</span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1">${ch.lore}</p>
+            <div class="text-xs text-amber-200 mt-1.5 font-semibold">Mục tiêu: ${ch.desc}</div>
+          </div>
+        `;
+      }).join('');
+      openModal('📜 Cốt Truyện Thống Lĩnh Thiên Hạ', html);
+    }
+
+    function openElderDialog() {
+      const ch = STORY_CHAPTERS[Math.min(storyStep, STORY_CHAPTERS.length - 1)];
+      openModal('🧙‍♂️ Trưởng Lão Thành Lạc Dương', `
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 leading-relaxed">
+          <p class="text-emerald-200 font-semibold mb-2">"Chào thiếu hiệp <span class="text-amber-300">${player.name}</span> của phái <span class="text-amber-300">${player.sect.name}</span>!"</p>
+          <p class="text-slate-200">${storyCompleted
+            ? 'Thiên hạ thái bình nhờ công lao to lớn của thiếu hiệp. Lục đại môn phái đời đời ghi nhớ!'
+            : ch.lore}</p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          ${storyStep === 0 ? `<button id="btn-accept-q1" class="gold-btn px-4 py-2 rounded-xl text-xs font-bold cursor-pointer">✅ Nhận Lệnh Bài (+300 Vàng)</button>` : ''}
+          <button id="btn-close-elder" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold cursor-pointer">Cáo từ</button>
+        </div>
+      `);
+      document.getElementById('btn-close-elder')?.addEventListener('click', closeModal);
+      document.getElementById('btn-accept-q1')?.addEventListener('click', () => {
+        completeStoryChapter();
+        closeModal();
+      });
+    }
+
+    function recalcStats() {
+      player.bonusAtk = (player.equippedWeapon?.atk || 0) + (player.equippedArmor?.atk || 0);
+      const newBonusHp = (player.equippedWeapon?.hp || 0) + (player.equippedArmor?.hp || 0);
+      const diff = newBonusHp - player.bonusHp;
+      player.bonusHp = newBonusHp;
+      player.maxHp += diff;
+      player.hp = Math.min(player.maxHp, player.hp + Math.max(0, diff));
+      updateHUD();
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-name').textContent = player.name;
+      document.getElementById('hud-sect').textContent = player.sect.name;
+      document.getElementById('hud-sect-icon').textContent = player.sect.icon;
+      document.getElementById('hud-lv').textContent = player.lv;
+      document.getElementById('hud-gold').textContent = player.gold;
+      document.getElementById('hud-atk').textContent = player.baseAtk + player.bonusAtk;
+      document.getElementById('bag-count').textContent = player.bag.length;
+
+      const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+      document.getElementById('hud-hp-bar').style.width = `${hpPct}%`;
+      document.getElementById('hud-hp-text').textContent = `${Math.round(player.hp)} / ${player.maxHp}`;
+      document.getElementById('hud-exp-bar').style.width = `${Math.min(100, (player.exp / player.maxExp) * 100)}%`;
+
+      if (storyCompleted) {
+        document.getElementById('quest-chapter').textContent = '🏆 Đã Thông Đảo Cốt Truyện';
+        document.getElementById('quest-desc').textContent = 'Tự do săn Boss, giao dịch Chợ & PK Cao Thủ!';
+      } else {
+        const ch = STORY_CHAPTERS[storyStep];
+        document.getElementById('quest-chapter').textContent = `📜 ${ch.title}`;
+        document.getElementById('quest-desc').textContent = storyStep === 1
+          ? `Tiêu diệt yêu quái Rừng U Minh (${storyKills}/5)`
+          : ch.desc;
+      }
+    }
+
+    function buildSkillBar() {
+      const bar = document.getElementById('skill-bar');
+      bar.innerHTML = SKILLS.map((s, i) => `
+        <button data-skill="${i}" class="skill-btn w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+          <span class="text-xl sm:text-2xl leading-none">${s.icon}</span>
+          <span class="text-[9px] sm:text-[10px] font-bold text-amber-200 mt-0.5 truncate max-w-[90%]">${s.name}</span>
+          <span class="absolute top-0.5 left-1.5 text-[9px] font-extrabold text-amber-400/90">${s.key}</span>
+          <div id="cd-overlay-${i}" class="skill-cd-overlay hidden"></div>
+        </button>
+      `).join('');
+
+      bar.querySelectorAll('[data-skill]').forEach(btn => {
+        const idx = Number(btn.dataset.skill);
+        btn.addEventListener('click', () => castSkill(idx));
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 10. KHỞI ĐỘNG NHÂN VẬT (MẶC ĐỊNH HOẶC NẠP FILE .GLB)
+    // ---------------------------------------------------------
+    function loadPlayerModel() {
+      if (player.model) {
+        player.group.remove(player.model);
+        player.model = null;
+      }
+      player.mixer = null;
+
+      if (customGlbUrl) {
+        const loader = new GLTFLoader();
+        loader.load(
+          customGlbUrl,
+          (gltf) => {
+            const m = gltf.scene;
+            const box = new THREE.Box3().setFromObject(m);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 1;
+            const scale = 2.35 / maxDim;
+            m.scale.setScalar(scale);
+            box.setFromObject(m);
+            m.position.y = -box.min.y;
+            m.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+            player.model = m;
+            player.group.add(m);
+            if (gltf.animations && gltf.animations.length > 0) {
+              player.mixer = new THREE.AnimationMixer(m);
+              player.mixer.clipAction(gltf.animations[0]).play();
+            }
+            showToast('📦 Đã hiển thị nhân vật 3D (.glb) của bạn!');
+          },
+          undefined,
+          () => {
+            showToast('⚠️ Không đọc được file .glb, chuyển sang mô hình môn phái 3D!');
+            player.model = createHumanoidRig(player.sect.robe, player.sect.armor, player.sect.weaponColor, 1.05, false);
+            player.group.add(player.model);
+          }
+        );
+      } else {
+        player.model = createHumanoidRig(player.sect.robe, player.sect.armor, player.sect.weaponColor, 1.05, false);
+        player.group.add(player.model);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 11. ĐIỀU KHIỂN BÀN PHÍM, CHUỘT XOAY CAMERA & JOYSTICK CẢM ỨNG
+    // ---------------------------------------------------------
+    const keys = {};
+    window.addEventListener('keydown', e => {
+      keys[e.code] = true;
+      if (!gameStarted) return;
+      if (e.key >= '1' && e.key <= '6') castSkill(Number(e.key) - 1);
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('pointerdown', e => {
+      if (e.button === 2 || e.button === 0) {
+        isDraggingCam = true;
+        lastMouseX = e.clientX;
+      }
+    });
+    window.addEventListener('pointermove', e => {
+      if (!isDraggingCam) return;
+      const dx = e.clientX - lastMouseX;
+      lastMouseX = e.clientX;
+      camYaw -= dx * 0.0065;
+    });
+    window.addEventListener('pointerup', () => { isDraggingCam = false; });
+
+    // Joystick ảo
+    const joyZone = document.getElementById('joystick-zone');
+    const joyKnob = document.getElementById('joystick-knob');
+    let joyActive = false;
+    const joyVec = { x: 0, y: 0 };
+
+    function updateJoystick(clientX, clientY) {
+      const rect = joyZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = clientX - cx;
+      let dy = clientY - cy;
+      const maxR = rect.width * 0.36;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+      joyVec.x = dx / maxR;
+      joyVec.y = dy / maxR;
+    }
+
+    joyZone.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      joyActive = true;
+      joyZone.setPointerCapture(e.pointerId);
+      updateJoystick(e.clientX, e.clientY);
+    });
+    joyZone.addEventListener('pointermove', e => { if (joyActive) updateJoystick(e.clientX, e.clientY); });
+    const resetJoy = () => { joyActive = false; joyVec.x = 0; joyVec.y = 0; joyKnob.style.transform = 'translate(0,0)'; };
+    joyZone.addEventListener('pointerup', resetJoy);
+    joyZone.addEventListener('pointercancel', resetJoy);
+
+    // ---------------------------------------------------------
+    // 12. VẼ MINI-MAP TRỰC TIẾP
+    // ---------------------------------------------------------
+    const miniCanvas = document.getElementById('minimap-canvas');
+    const miniCtx = miniCanvas.getContext('2d');
+
+    function drawMinimap() {
+      const w = miniCanvas.width, h = miniCanvas.height;
+      miniCtx.fillStyle = '#090d18';
+      miniCtx.fillRect(0, 0, w, h);
+
+      const toMap = (x, z) => [((x + 78) / 156) * w, ((z + 78) / 156) * h];
+
+      // Vùng Thành Lạc Dương (xanh) & Huyết Chiến Đài (đỏ)
+      const [tx, tz] = toMap(0, 35);
+      miniCtx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+      miniCtx.beginPath(); miniCtx.arc(tx, tz, 15, 0, Math.PI * 2); miniCtx.fill();
+
+      const [bx, bz] = toMap(0, -45);
+      miniCtx.fillStyle = 'rgba(225, 29, 72, 0.26)';
+      miniCtx.beginPath(); miniCtx.arc(bx, bz, 14, 0, Math.PI * 2); miniCtx.fill();
+
+      // NPC Trưởng Lão
+      const [nx, nz] = toMap(0, 29);
+      miniCtx.fillStyle = '#34d399';
+      miniCtx.beginPath(); miniCtx.arc(nx, nz, 3.2, 0, Math.PI * 2); miniCtx.fill();
+
+      // Quái & Boss
+      enemies.forEach(en => {
+        if (en.deadTimer > 0) return;
+        const [ex, ez] = toMap(en.group.position.x, en.group.position.z);
+        miniCtx.fillStyle = en.isBoss ? '#f43f5e' : '#fb923c';
+        miniCtx.beginPath(); miniCtx.arc(ex, ez, en.isBoss ? 4.5 : 2.3, 0, Math.PI * 2); miniCtx.fill();
+      });
+
+      // Cao Thủ PK (chấm tím)
+      pkRivals.forEach(rv => {
+        if (rv.deadTimer > 0) return;
+        const [rx, rz] = toMap(rv.group.position.x, rv.group.position.z);
+        miniCtx.fillStyle = '#c084fc';
+        miniCtx.beginPath(); miniCtx.arc(rx, rz, 2.8, 0, Math.PI * 2); miniCtx.fill();
+      });
+
+      // Người chơi (chấm vàng sáng)
+      const [px, pz] = toMap(player.group.position.x, player.group.position.z);
+      miniCtx.fillStyle = '#fde047';
+      miniCtx.beginPath(); miniCtx.arc(px, pz, 3.8, 0, Math.PI * 2); miniCtx.fill();
+    }
+
+    // ---------------------------------------------------------
+    // 13. GẮN SỰ KIỆN NÚT BẤM UI
+    // ---------------------------------------------------------
+    function initUI() {
+      renderSectCards();
+      buildSkillBar();
+
+      document.getElementById('glb-file-input').addEventListener('change', e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        customGlbUrl = URL.createObjectURL(file);
+        const st = document.getElementById('glb-status');
+        st.textContent = `✅ Đã chọn: ${file.name}`;
+        st.classList.remove('hidden');
+      });
+
+      document.getElementById('btn-start-game').addEventListener('click', () => {
+        const sect = SECTS[selectedSectIdx];
+        player.sect = sect;
+        player.name = document.getElementById('player-name-input').value.trim() || 'Vô Danh Hiệp Khách';
+        player.maxHp = sect.hp;
+        player.hp = sect.hp;
+        player.baseAtk = sect.atk;
+        player.speed = sect.speed;
+
+        loadPlayerModel();
+        document.getElementById('select-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        gameStarted = true;
+        updateHUD();
+        showToast(`⚔️ Chào mừng ${player.name} gia nhập phái ${sect.name}!`);
+        setTimeout(() => openElderDialog(), 600);
+      });
+
+      document.getElementById('modal-close').addEventListener('click', closeModal);
+      document.getElementById('modal-backdrop').addEventListener('click', e => {
+        if (e.target.id === 'modal-backdrop') closeModal();
+      });
+
+      document.getElementById('btn-bag').addEventListener('click', openBagModal);
+      document.getElementById('btn-market').addEventListener('click', openMarketModal);
+      document.getElementById('btn-map').addEventListener('click', openWorldMapModal);
+      miniCanvas.addEventListener('click', openWorldMapModal);
+      document.getElementById('btn-story').addEventListener('click', openStoryModal);
+
+      document.getElementById('btn-home').addEventListener('click', () => {
+        player.group.position.set(0, 0, 36);
+        player.hp = player.maxHp;
+        autoPathTarget = null;
+        spawnSkillVFX(3, player.group.position, 0, 4, 0x34d399);
+        showToast('🏯 Đã hồi thành Lạc Dương & phục hồi 100% Máu!');
+        updateHUD();
+      });
+
+      document.getElementById('btn-auto').addEventListener('click', e => {
+        autoMode = !autoMode;
+        e.currentTarget.textContent = autoMode ? '🤖 Auto: BẬT' : '🤖 Auto';
+        e.currentTarget.classList.toggle('border-emerald-400', autoMode);
+        e.currentTarget.classList.toggle('text-emerald-300', autoMode);
+        showToast(autoMode ? '🤖 Đã bật Tự Động Đánh Quái!' : '🤖 Đã tắt Auto.');
+      });
+
+      document.getElementById('btn-pk').addEventListener('click', e => {
+        pkMode = !pkMode;
+        e.currentTarget.textContent = pkMode ? '⚔️ Đồ Sát' : '🕊️ Hòa Bình';
+        e.currentTarget.classList.toggle('border-rose-500', pkMode);
+        e.currentTarget.classList.toggle('text-rose-400', pkMode);
+        showToast(pkMode ? '⚔️ Bật Đồ Sát! Có thể solo PK Cao Thủ Giang Hồ (chấm tím) ngoài thành!' : '🕊️ Chuyển sang trạng thái Hòa Bình.');
+      });
+
+      document.getElementById('quest-tracker').addEventListener('click', () => {
+        if (storyCompleted) { openStoryModal(); return; }
+        const ch = STORY_CHAPTERS[storyStep];
+        if (storyStep === 0 && player.group.position.distanceTo(ch.target) < 4.5) {
+          openElderDialog();
+        } else {
+          autoPathTarget = ch.target.clone();
+          showToast(`🧭 Tự động tìm đường: ${ch.title}`);
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    // ---------------------------------------------------------
+    // 14. VÒNG LẶP GAME CHÍNH (ANIMATION LOOP)
+    // ---------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const now = clock.elapsedTime;
+
+      if (!gameStarted) {
+        camera.position.set(Math.sin(now * 0.2) * 34, 18, 12 + Math.cos(now * 0.2) * 34);
+        camera.lookAt(0, 2, 10);
+        renderer.render(scene, camera);
+        return;
+      }
+
+      if (player.mixer) player.mixer.update(dt);
+
+      // Cập nhật hồi chiêu 6 kỹ năng
+      for (let i = 0; i < SKILLS.length; i++) {
+        if (player.skillCds[i] > 0) {
+          player.skillCds[i] = Math.max(0, player.skillCds[i] - dt);
+          const ov = document.getElementById(`cd-overlay-${i}`);
+          if (player.skillCds[i] > 0.05) {
+            ov.classList.remove('hidden');
+            ov.textContent = player.skillCds[i].toFixed(1);
+          } else {
+            ov.classList.add('hidden');
+          }
+        }
+      }
+
+      // Tính hướng di chuyển từ WASD / Joystick theo góc xoay Camera
+      let inX = 0, inZ = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) inZ -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) inZ += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) inX -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) inX += 1;
+      if (Math.abs(joyVec.x) > 0.08 || Math.abs(joyVec.y) > 0.08) {
+        inX = joyVec.x; inZ = joyVec.y;
+      }
+
+      const moveVec = new THREE.Vector3();
+      if (Math.abs(inX) > 0.05 || Math.abs(inZ) > 0.05) {
+        autoPathTarget = null;
+        const cosY = Math.cos(camYaw), sinY = Math.sin(camYaw);
+        moveVec.set(inX * cosY + inZ * sinY, 0, -inX * sinY + inZ * cosY).normalize();
+      } else if (autoPathTarget) {
+        const diff = autoPathTarget.clone().sub(player.group.position).setY(0);
+        if (diff.length() > 2.2) {
+          moveVec.copy(diff.normalize());
+        } else {
+          autoPathTarget = null;
+          if (storyStep === 0) openElderDialog();
+        }
+      } else if (autoMode) {
+        // Tự tìm quái gần nhất đánh
+        let nearest = null, minD = 999;
+        enemies.forEach(en => {
+          if (en.deadTimer > 0) return;
+          const d = en.group.position.distanceTo(player.group.position);
+          if (d < minD) { minD = d; nearest = en; }
+        });
+        if (nearest) {
+          const diff = nearest.group.position.clone().sub(player.group.position).setY(0);
+          if (minD > 3.6) {
+            moveVec.copy(diff.normalize());
+          } else {
+            player.group.rotation.y = Math.atan2(diff.x, diff.z);
+            for (let sIdx = 5; sIdx >= 0; sIdx--) {
+              if (sIdx === 3 && player.hp > player.maxHp * 0.72) continue;
+              if (player.skillCds[sIdx] <= 0) { castSkill(sIdx); break; }
+            }
+          }
+        }
+      }
+
+      const isMoving = moveVec.lengthSq() > 0.01;
+      if (isMoving) {
+        player.group.position.addScaledVector(moveVec, player.speed * dt);
+        player.group.position.x = THREE.MathUtils.clamp(player.group.position.x, -74, 74);
+        player.group.position.z = THREE.MathUtils.clamp(player.group.position.z, -74, 74);
+        const targetYaw = Math.atan2(moveVec.x, moveVec.z);
+        let diff = targetYaw - player.group.rotation.y;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        player.group.rotation.y += diff * Math.min(1, dt * 14);
+      }
+
+      let actionProg = 0;
+      if (player.actionType >= 0) {
+        player.actionTime += dt;
+        actionProg = player.actionTime / player.actionDuration;
+        if (actionProg >= 1) { player.actionType = -1; actionProg = 0; }
+      }
+      updateHumanoidAnimation(player.model, dt, now, isMoving, player.actionType, actionProg);
+
+      if (npcElder) updateHumanoidAnimation(npcElder, dt, now, false, -1, 0);
+
+      // Cập nhật tên khu vực & hồi máu trong Thành An Toàn
+      const pz = player.group.position.z;
+      const inSafeZone = pz > 20;
+      document.getElementById('zone-label').textContent =
+        inSafeZone ? '🏯 Thành Lạc Dương' : pz < -25 ? '🔥 Huyết Chiến Đài' : '🌲 Rừng U Minh';
+      document.getElementById('coords-label').textContent =
+        `${Math.round(player.group.position.x)}, ${Math.round(pz)}`;
+      if (inSafeZone && player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.08 * dt);
+        updateHUD();
+      }
+
+      // Cập nhật Quái & Boss Ma Tôn
+      let showBossBar = false;
+      enemies.forEach(en => {
+        if (en.deadTimer > 0) {
+          en.deadTimer -= dt;
+          if (en.deadTimer <= 0) {
+            en.hp = en.maxHp;
+            en.group.position.set(en.homeX, en.isBoss ? 0.35 : 0, en.homeZ);
+            en.group.visible = true;
+          }
+          return;
+        }
+        const d = en.group.position.distanceTo(player.group.position);
+
+        if (en.isBoss && d < 28) {
+          showBossBar = true;
+          document.getElementById('boss-hp-text').textContent = `${Math.round(en.hp)} / ${en.maxHp}`;
+          document.getElementById('boss-hp-fill').style.width = `${(en.hp / en.maxHp) * 100}%`;
+
+          // Cơ chế chiêu AoE vòng cảnh báo đỏ của Boss
+          if (en.aoeCharging > 0) {
+            en.aoeCharging -= dt;
+            en.aoeWarn.position.set(en.group.position.x, 0.42, en.group.position.z);
+            en.aoeWarn.scale.setScalar(0.85 + Math.sin(now * 22) * 0.08);
+            if (en.aoeCharging <= 0) {
+              en.aoeWarn.visible = false;
+              spawnSkillVFX(4, en.group.position, 0, 9.5, 0xf43f5e);
+              camShake = 0.48;
+              if (d <= 9.6) {
+                applyDamageToPlayer(en.atk * 2);
+                showToast('💥 Trúng chiêu Huyết Lôi AoE của Boss Ma Tôn!');
+              }
+            }
+          } else {
+            en.aoeCd -= dt;
+            if (en.aoeCd <= 0 && d < 16) {
+              en.aoeCd = 7.5;
+              en.aoeCharging = 2.0;
+              en.aoeWarn.visible = true;
+              showToast('⚠️ Boss Ma Tôn đang tụ Huyết Lôi AoE! Chạy khỏi vòng đỏ!');
+            }
+          }
+        }
+
+        if (!inSafeZone && d < (en.isBoss ? 22 : 14)) {
+          if (d > (en.isBoss ? 3.6 : 2.3)) {
+            const dir = player.group.position.clone().sub(en.group.position).setY(0).normalize();
+            en.group.position.x += dir.x * en.speed * dt;
+            en.group.position.z += dir.z * en.speed * dt;
+            en.group.rotation.y = Math.atan2(dir.x, dir.z);
+            if (en.isBoss) updateHumanoidAnimation(en.group, dt, now, true, -1, 0);
+          } else {
+            en.atkCd -= dt;
+            if (en.atkCd <= 0) {
+              en.atkCd = en.isBoss ? 1.35 : 1.6;
+              en.swingAnim = 0.45;
+              applyDamageToPlayer(en.atk);
+              if (en.isBoss) camShake = 0.25;
+              spawnVFX(en.group.position.x, 0.5, en.group.position.z, en.isBoss ? 3.8 : 2.0, 0xef4444, true);
+            }
+            if (en.isBoss) {
+              if (en.swingAnim > 0) en.swingAnim = Math.max(0, en.swingAnim - dt);
+              const bProg = en.swingAnim > 0 ? 1 - en.swingAnim / 0.45 : 0;
+              updateHumanoidAnimation(en.group, dt, now, false, en.swingAnim > 0 ? 4 : -1, bProg);
+            }
+          }
+        } else if (en.isBoss) {
+          updateHumanoidAnimation(en.group, dt, now, false, -1, 0);
+        }
+      });
+      document.getElementById('boss-bar').style.display = showBossBar ? 'block' : 'none';
+
+      // Cập nhật Cao Thủ Giang Hồ (PK)
+      pkRivals.forEach(rv => {
+        if (rv.deadTimer > 0) {
+          rv.deadTimer -= dt;
+          if (rv.deadTimer <= 0) {
+            rv.hp = rv.maxHp;
+            rv.group.position.set(rv.homeX, 0, rv.homeZ);
+            rv.group.visible = true;
+          }
+          return;
+        }
+        const d = rv.group.position.distanceTo(player.group.position);
+        let rvMoving = false;
+        if (pkMode && !inSafeZone && d < 18) {
+          if (d > 2.8) {
+            const dir = player.group.position.clone().sub(rv.group.position).setY(0).normalize();
+            rv.group.position.x += dir.x * rv.speed * dt;
+            rv.group.position.z += dir.z * rv.speed * dt;
+            rv.group.rotation.y = Math.atan2(dir.x, dir.z);
+            rvMoving = true;
+          } else {
+            rv.atkCd -= dt;
+            if (rv.atkCd <= 0) {
+              rv.atkCd = 1.4;
+              rv.swingAnim = 0.36;
+              applyDamageToPlayer(rv.atk);
+              spawnVFX(rv.group.position.x, 0.4, rv.group.position.z, 2.8, 0xc084fc, true);
+            }
+          }
+        } else {
+          rv.wanderAng += dt * 0.5;
+          rv.group.position.x = rv.homeX + Math.cos(rv.wanderAng) * 4.5;
+          rv.group.position.z = rv.homeZ + Math.sin(rv.wanderAng) * 4.5;
+          rv.group.rotation.y = -rv.wanderAng;
+          rvMoving = true;
+        }
+        if (rv.swingAnim > 0) rv.swingAnim = Math.max(0, rv.swingAnim - dt);
+        const rProg = rv.swingAnim > 0 ? 1 - rv.swingAnim / 0.36 : 0;
+        updateHumanoidAnimation(rv.group, dt, now, rvMoving, rv.swingAnim > 0 ? 0 : -1, rProg);
+      });
+
+      // Cập nhật hiệu ứng VFX 3D
+      for (let i = vfxList.length - 1; i >= 0; i--) {
+        const v = vfxList[i];
+        v.life -= dt;
+        const p = Math.min(1, 1 - v.life / v.maxLife);
+
+        if (v.kind === 'slash') {
+          v.mesh.rotation.z += v.spin * dt;
+          v.mesh.scale.setScalar(1 + p * 0.35);
+          v.mesh.material.opacity = Math.max(0, 1 - p);
+        } else if (v.kind === 'spinRing') {
+          v.mesh.rotation.z += v.spin * dt;
+          v.mesh.scale.setScalar(0.85 + p * 0.45);
+          v.mesh.material.opacity = Math.max(0, 1 - p);
+        } else if (v.kind === 'pillar') {
+          v.mesh.rotation.y += (v.spin || 5) * dt;
+          v.mesh.scale.set(1 + p * 0.25, 1 + p * 0.35, 1 + p * 0.25);
+          v.mesh.material.opacity = Math.max(0, (1 - p) * 0.85);
+        } else if (v.kind === 'particle') {
+          v.mesh.position.addScaledVector(v.vel, dt);
+          if (!v.noGravity) v.vel.y -= 14 * dt;
+          v.mesh.scale.setScalar(Math.max(0.01, 1 - p));
+          v.mesh.material.opacity = Math.max(0, 1 - p);
+        } else if (v.kind === 'skyBlade') {
+          if (v.mesh.position.y > v.targetY) {
+            v.mesh.position.y = Math.max(v.targetY, v.mesh.position.y - 36 * dt);
+          }
+          const alpha = p > 0.6 ? Math.max(0, 1 - (p - 0.6) / 0.4) : 0.95;
+          v.mesh.traverse(c => { if (c.material) c.material.opacity = alpha; });
+        } else if (v.kind === 'fade') {
+          v.mesh.material.opacity = Math.max(0, (1 - p) * 0.55);
+        } else {
+          v.mesh.scale.setScalar(1 + p * (v.kind === 'ring' ? 0.65 : 0.9));
+          v.mesh.material.opacity = Math.max(0, 1 - p);
+        }
+
+        if (v.life <= 0) {
+          scene.remove(v.mesh);
+          v.mesh.traverse(c => {
+            if (c.geometry) c.geometry.dispose();
+            if (c.material) c.material.dispose();
+          });
+          vfxList.splice(i, 1);
+        }
+      }
+
+      // Camera bám theo nhân vật + rung chấn khi ra chiêu
+      const camDist = 13.0;
+      const targetCam = new THREE.Vector3(
+        player.group.position.x + Math.sin(camYaw) * camDist,
+        11.2,
+        player.group.position.z + Math.cos(camYaw) * camDist
+      );
+      camera.position.lerp(targetCam, 0.12);
+      if (camShake > 0.01) {
+        camera.position.x += (Math.random() - 0.5) * camShake;
+        camera.position.y += (Math.random() - 0.5) * camShake;
+        camShake = Math.max(0, camShake - dt * 2.2);
+      }
+      camera.lookAt(player.group.position.x, 1.35, player.group.position.z);
+
+      drawMinimap();
+      renderer.render(scene, camera);
+    }
+
+    // Khởi chạy toàn bộ thế giới & UI
+    buildWorld();
+    spawnEnemiesAndRivals();
+    initUI();
+    animate();
+  </script>
+</body>
+</html>
