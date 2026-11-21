@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lục Đao PK - 2.5D Prototype</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #0f1117; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #hud {
+      position: fixed; top: 12px; left: 12px; right: 12px;
+      display: flex; justify-content: space-between; pointer-events: none; gap: 16px;
+    }
+    .bar-box { background: rgba(15, 17, 23, 0.8); border: 1px solid #d4af37; border-radius: 8px; padding: 8px 12px; min-width: 220px; }
+    .bar-title { font-size: 13px; font-weight: bold; color: #f5d76e; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .hp-track { width: 100%; height: 12px; background: #2c2f3a; border-radius: 6px; overflow: hidden; }
+    .hp-fill { height: 100%; transition: width 0.15s; }
+    #player-hp { background: linear-gradient(90deg, #2ecc71, #27ae60); width: 100%; }
+    #boss-hp { background: linear-gradient(90deg, #e74c3c, #c0392b); width: 100%; }
+    #skills {
+      position: fixed; bottom: 18px; right: 18px;
+      display: grid; grid-template-columns: repeat(3, 64px); gap: 10px;
+    }
+    .skill-btn {
+      width: 64px; height: 64px; border-radius: 12px; border: 2px solid #d4af37;
+      background: rgba(20, 24, 34, 0.9); color: #fff; font-weight: bold; font-size: 11px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; overflow: hidden; text-align: center; padding: 4px;
+    }
+    .skill-btn:active { transform: scale(0.94); }
+    .skill-key { font-size: 10px; color: #f5d76e; margin-bottom: 2px; }
+    .cd-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.72);
+      display: none; align-items: center; justify-content: center; font-size: 18px; color: #ff6b6b;
+    }
+    #hint {
+      position: fixed; bottom: 18px; left: 18px; background: rgba(15,17,23,0.75);
+      border: 1px solid #444; padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #ccc;
+    }
+    #msg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    #msg h1 { color: #f5d76e; font-size: 36px; }
+    #msg button {
+      padding: 10px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px;
+      background: #d4af37; color: #111; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="bar-box">
+      <div class="bar-title"><span>Lục Đao Khách</span><span id="p-hp-text">1000 / 1000</span></div>
+      <div class="hp-track"><div id="player-hp" class="hp-fill"></div></div>
+    </div>
+    <div class="bar-box">
+      <div class="bar-title"><span>Ma Tôn Boss</span><span id="b-hp-text">2000 / 2000</span></div>
+      <div class="hp-track"><div id="boss-hp" class="hp-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="hint">Di chuyển: <b>W A S D</b> hoặc <b>Phím mũi tên</b> | Tung chiêu: Phím <b>1 - 6</b> hoặc bấm nút</div>
+
+  <div id="skills"></div>
+
+  <div id="msg">
+    <h1 id="msg-title">CHIẾN THẮNG!</h1>
+    <button onclick="location.reload()">Chơi lại</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    const SKILLS = [
+      { key: '1', name: 'Trảm Phong', cd: 1.0, dmg: 90, range: 110, color: '#38bdf8', type: 'slash' },
+      { key: '2', name: 'Bá Đao', cd: 3.0, dmg: 160, range: 140, color: '#f59e0b', type: 'arc' },
+      { key: '3', name: 'Lướt Ảnh', cd: 4.0, dmg: 70, range: 180, color: '#a855f7', type: 'dash' },
+      { key: '4', name: 'Toàn Phong', cd: 6.0, dmg: 220, range: 150, color: '#ef4444', type: 'aoe' },
+      { key: '5', name: 'Hộ Thể', cd: 8.0, dmg: 0, range: 0, color: '#22c55e', type: 'heal' },
+      { key: '6', name: 'Lục Đao Tuyệt', cd: 12.0, dmg: 420, range: 220, color: '#facc15', type: 'ult' }
+    ];
+
+    const player = { x: 300, y: 360, hp: 1000, maxHp: 1000, speed: 260, dirX: 1, dirY: 0, cds: SKILLS.map(() => 0) };
+    const boss = { x: 800, y: 360, hp: 2000, maxHp: 2000, speed: 135, atkCd: 1.5 };
+    const effects = [];
+    const keys = {};
+    let gameOver = false;
+
+    const skillsDiv = document.getElementById('skills');
+    SKILLS.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'skill-btn';
+      btn.innerHTML = `<span class="skill-key">[${s.key}]</span><span>${s.name}</span><div class="cd-overlay" id="cd-${i}"></div>`;
+      btn.onclick = () => castSkill(i);
+      skillsDiv.appendChild(btn);
+    });
+
+    window.addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+      const idx = SKILLS.findIndex(s => s.key === e.key);
+      if (idx !== -1) castSkill(idx);
+    });
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    function castSkill(i) {
+      if (gameOver || player.cds[i] > 0) return;
+      const s = SKILLS[i];
+      player.cds[i] = s.cd;
+
+      if (s.type === 'dash') {
+        player.x += player.dirX * 160;
+        player.y += player.dirY * 160;
+      }
+      if (s.type === 'heal') {
+        player.hp = Math.min(player.maxHp, player.hp + 260);
+        effects.push({ x: player.x, y: player.y, r: 50, color: s.color, life: 0.4 });
+        return;
+      }
+
+      effects.push({ x: player.x, y: player.y, r: s.range, color: s.color, life: 0.3 });
+      const dist = Math.hypot(boss.x - player.x, boss.y - player.y);
+      if (dist <= s.range + 30) {
+        boss.hp = Math.max(0, boss.hp - s.dmg);
+        if (boss.hp <= 0) endGame('CHIẾN THẮNG! Ma Tôn đã bị tiêu diệt');
+      }
+    }
+
+    function endGame(text) {
+      gameOver = true;
+      document.getElementById('msg-title').textContent = text;
+      document.getElementById('msg').style.display = 'flex';
+    }
+
+    function drawCharacter(x, y, bodyColor, robeColor, isBoss) {
+      // Bóng dưới chân tạo cảm giác 2.5D
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath(); ctx.ellipse(x, y + 26, isBoss ? 28 : 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+      // Áo choàng cổ trang
+      ctx.fillStyle = robeColor;
+      ctx.beginPath(); ctx.moveTo(x - 16, y + 22); ctx.lineTo(x + 16, y + 22); ctx.lineTo(x + 10, y - 10); ctx.lineTo(x - 10, y - 10); ctx.closePath(); ctx.fill();
+      // Đầu & Búi tóc
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath(); ctx.arc(x, y - 20, isBoss ? 14 : 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(x, y - 32, 5, 0, Math.PI * 2); ctx.fill();
+      // Đao
+      ctx.strokeStyle = isBoss ? '#ff4d4d' : '#e2e8f0';
+      ctx.lineWidth = isBoss ? 5 : 4;
+      ctx.beginPath(); ctx.moveTo(x + 12, y); ctx.lineTo(x + (isBoss ? 36 : 30), y - 22); ctx.stroke();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+
+      if (!gameOver) {
+        let mx = 0, my = 0;
+        if (keys['w'] || keys['arrowup']) my -= 1;
+        if (keys['s'] || keys['arrowdown']) my += 1;
+        if (keys['a'] || keys['arrowleft']) mx -= 1;
+        if (keys['d'] || keys['arrowright']) mx += 1;
+        if (mx || my) {
+          const len = Math.hypot(mx, my);
+          player.dirX = mx / len; player.dirY = my / len;
+          player.x = Math.max(40, Math.min(canvas.width - 40, player.x + player.dirX * player.speed * dt));
+          player.y = Math.max(80, Math.min(canvas.height - 40, player.y + player.dirY * player.speed * dt));
+        }
+
+        // Boss AI đuổi theo và đánh
+        const dx = player.x - boss.x, dy = player.y - boss.y, dist = Math.hypot(dx, dy);
+        if (dist > 65) {
+          boss.x += (dx / dist) * boss.speed * dt;
+          boss.y += (dy / dist) * boss.speed * dt;
+        } else {
+          boss.atkCd -= dt;
+          if (boss.atkCd <= 0) {
+            boss.atkCd = 1.4;
+            player.hp = Math.max(0, player.hp - 110);
+            effects.push({ x: boss.x, y: boss.y, r: 85, color: '#ff3b30', life: 0.25 });
+            if (player.hp <= 0) endGame('THẤT BẠI! Bạn đã bị đánh bại');
+          }
+        }
+
+        // Hồi chiêu
+        SKILLS.forEach((s, i) => {
+          if (player.cds[i] > 0) {
+            player.cds[i] = Math.max(0, player.cds[i] - dt);
+            const el = document.getElementById(`cd-${i}`);
+            el.style.display = player.cds[i] > 0 ? 'flex' : 'none';
+            el.textContent = Math.ceil(player.cds[i]);
+          }
+        });
+      }
+
+      // Vẽ sân đấu 2.5D
+      ctx.fillStyle = '#181c24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.12)'; ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+      // Vẽ hiệu ứng chiêu thức
+      for (let i = effects.length - 1; i >= 0; i--) {
+        const ef = effects[i]; ef.life -= dt;
+        if (ef.life <= 0) { effects.splice(i, 1); continue; }
+        ctx.strokeStyle = ef.color; ctx.lineWidth = 4; ctx.globalAlpha = ef.life * 3;
+        ctx.beginPath(); ctx.arc(ef.x, ef.y, ef.r, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      drawCharacter(boss.x, boss.y, '#fca5a5', '#7f1d1d', true);
+      drawCharacter(player.x, player.y, '#fde68a', '#1d4ed8', false);
+
+      // Cập nhật thanh máu
+      document.getElementById('player-hp').style.width = (player.hp / player.maxHp * 100) + '%';
+      document.getElementById('p-hp-text').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+      document.getElementById('boss-hp').style.width = (boss.hp / boss.maxHp * 100) + '%';
+      document.getElementById('b-hp-text').textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
