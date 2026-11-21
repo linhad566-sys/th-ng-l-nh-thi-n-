@@ -139,18 +139,14 @@
     }
 
     function drawCharacter(x, y, bodyColor, robeColor, isBoss) {
-      // Bóng dưới chân tạo cảm giác 2.5D
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath(); ctx.ellipse(x, y + 26, isBoss ? 28 : 20, 10, 0, 0, Math.PI * 2); ctx.fill();
-      // Áo choàng cổ trang
       ctx.fillStyle = robeColor;
       ctx.beginPath(); ctx.moveTo(x - 16, y + 22); ctx.lineTo(x + 16, y + 22); ctx.lineTo(x + 10, y - 10); ctx.lineTo(x - 10, y - 10); ctx.closePath(); ctx.fill();
-      // Đầu & Búi tóc
       ctx.fillStyle = bodyColor;
       ctx.beginPath(); ctx.arc(x, y - 20, isBoss ? 14 : 11, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#111';
       ctx.beginPath(); ctx.arc(x, y - 32, 5, 0, Math.PI * 2); ctx.fill();
-      // Đao
       ctx.strokeStyle = isBoss ? '#ff4d4d' : '#e2e8f0';
       ctx.lineWidth = isBoss ? 5 : 4;
       ctx.beginPath(); ctx.moveTo(x + 12, y); ctx.lineTo(x + (isBoss ? 36 : 30), y - 22); ctx.stroke();
@@ -173,7 +169,6 @@
           player.y = Math.max(80, Math.min(canvas.height - 40, player.y + player.dirY * player.speed * dt));
         }
 
-        // Boss AI đuổi theo và đánh
         const dx = player.x - boss.x, dy = player.y - boss.y, dist = Math.hypot(dx, dy);
         if (dist > 65) {
           boss.x += (dx / dist) * boss.speed * dt;
@@ -188,7 +183,6 @@
           }
         }
 
-        // Hồi chiêu
         SKILLS.forEach((s, i) => {
           if (player.cds[i] > 0) {
             player.cds[i] = Math.max(0, player.cds[i] - dt);
@@ -199,13 +193,11 @@
         });
       }
 
-      // Vẽ sân đấu 2.5D
       ctx.fillStyle = '#181c24'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = 'rgba(212, 175, 55, 0.12)'; ctx.lineWidth = 1;
       for (let x = 0; x < canvas.width; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
       for (let y = 0; y < canvas.height; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
 
-      // Vẽ hiệu ứng chiêu thức
       for (let i = effects.length - 1; i >= 0; i--) {
         const ef = effects[i]; ef.life -= dt;
         if (ef.life <= 0) { effects.splice(i, 1); continue; }
@@ -217,7 +209,6 @@
       drawCharacter(boss.x, boss.y, '#fca5a5', '#7f1d1d', true);
       drawCharacter(player.x, player.y, '#fde68a', '#1d4ed8', false);
 
-      // Cập nhật thanh máu
       document.getElementById('player-hp').style.width = (player.hp / player.maxHp * 100) + '%';
       document.getElementById('p-hp-text').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
       document.getElementById('boss-hp').style.width = (boss.hp / boss.maxHp * 100) + '%';
