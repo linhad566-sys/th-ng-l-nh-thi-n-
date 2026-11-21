@@ -79,9 +79,7 @@
   <!-- Thông báo Toast -->
   <div id="toast-box" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
 
-  <!-- ========================================================= -->
-  <!-- MÀN HÌNH CHỌN 6 MÔN PHÁI & NẠP MÔ HÌNH 3D (.GLB)          -->
-  <!-- ========================================================= -->
+  <!-- Màn hình chọn 6 môn phái & nạp mô hình 3D (.glb) -->
   <div id="select-screen" class="fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
     <div class="glass-panel rounded-2xl w-full max-w-5xl p-4 sm:p-6 my-auto">
       <div class="text-center mb-4 sm:mb-6">
@@ -118,9 +116,7 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- GIAO DIỆN HUD TRONG GAME                                  -->
-  <!-- ========================================================= -->
+  <!-- Giao diện HUD trong game -->
   <div id="hud" class="fixed inset-0 z-10 pointer-events-none hidden">
     <!-- Góc trên trái: Thông tin nhân vật + Bảng Nhiệm Vụ Cốt Truyện -->
     <div class="absolute top-3 left-3 flex flex-col gap-2 max-w-[270px] sm:max-w-xs pointer-events-auto">
@@ -210,9 +206,7 @@
     <div id="skill-bar" class="absolute bottom-4 right-4 pointer-events-auto grid grid-cols-3 gap-2 sm:gap-2.5"></div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- CÁC CỬA SỔ MODAL: TÚI ĐỒ, CHỢ, BẢN ĐỒ, CỐT TRUYỆN, NPC   -->
-  <!-- ========================================================= -->
+  <!-- Cửa sổ Modal: Túi Đồ, Chợ, Bản Đồ, Cốt Truyện, NPC -->
   <div id="modal-backdrop" class="fixed inset-0 z-40 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-3">
     <div class="glass-panel rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-amber-500/30 bg-slate-900/70">
@@ -223,16 +217,11 @@
     </div>
   </div>
 
-  <!-- ========================================================= -->
-  <!-- MÃ NGUỒN GAME 3D THREE.JS (ES MODULE)                     -->
-  <!-- ========================================================= -->
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // ---------------------------------------------------------
-    // 1. DỮ LIỆU 6 MÔN PHÁI, 6 KỸ NĂNG, CỐT TRUYỆN & CHỢ
-    // ---------------------------------------------------------
+    // 1. Dữ liệu 6 môn phái, 6 kỹ năng, cốt truyện & chợ
     const SECTS = [
       {
         id: 'chiensy', name: 'Chiến Sỹ', icon: '⚔️', weapon: 'Bá Vương Đao',
@@ -321,9 +310,7 @@
       { id: 'p1', name: 'Cửu Chuyển Hoàn Hồn Đan', type: 'potion', atk: 0, hp: 0, price: 120, rarity: 'Đan Dược' }
     ];
 
-    // ---------------------------------------------------------
-    // 2. KHỞI TẠO CẢNH 3D, ÁNH SÁNG & CAMERA (PHONG CÁCH TỐI ÁNH KIM)
-    // ---------------------------------------------------------
+    // 2. Khởi tạo cảnh 3D, ánh sáng & camera
     const canvas = document.getElementById('game-canvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -340,7 +327,6 @@
     const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 260);
     camera.position.set(0, 12, 48);
 
-    // Ánh sáng kiếm hiệp đêm huyền ảo + viền vàng ấm
     const hemiLight = new THREE.HemisphereLight(0x93c5fd, 0x1e1b2e, 0.72);
     scene.add(hemiLight);
 
@@ -361,15 +347,12 @@
     bossLight.position.set(0, 8, -45);
     scene.add(bossLight);
 
-    // Biến điều khiển camera
     let camYaw = 0;
     let camShake = 0;
     let isDraggingCam = false;
     let lastMouseX = 0;
 
-    // ---------------------------------------------------------
-    // 3. TRẠNG THÁI GAME & NGƯỜI CHƠI
-    // ---------------------------------------------------------
+    // 3. Trạng thái game & người chơi
     let selectedSectIdx = 0;
     let customGlbUrl = null;
     let gameStarted = false;
@@ -409,9 +392,7 @@
     player.group.position.set(0, 0, 36);
     scene.add(player.group);
 
-    // ---------------------------------------------------------
-    // 4. DỰNG KHUNG XƯƠNG NHÂN VẬT 3D PHÂN KHỚP NHƯ NGƯỜI THẬT
-    // ---------------------------------------------------------
+    // 4. Dựng khung xương nhân vật 3D phân khớp như người thật
     function createHumanoidRig(robeColor, armorColor, weaponColor, scale = 1, isBoss = false) {
       const g = new THREE.Group();
       const matRobe = new THREE.MeshStandardMaterial({ color: robeColor, roughness: 0.62 });
@@ -572,11 +553,9 @@
       return g;
     }
 
-    // Hoạt ảnh phân khớp tự nhiên: thở nhẹ, chạy gập gối đánh tay, áo choàng bay, 6 thế võ
     function updateHumanoidAnimation(model, dt, now, isMoving, actionType = -1, actionProgress = 0) {
       if (!model) return;
       if (!model.userData || !model.userData.hips) {
-        // Nếu là mô hình .glb ngoài không có rig tự dựng -> nhún chạy mượt
         model.position.y = isMoving ? Math.abs(Math.sin(now * 11)) * 0.16 : Math.sin(now * 2.5) * 0.03;
         model.rotation.x = isMoving ? 0.1 : 0;
         return;
@@ -669,13 +648,10 @@
       }
     }
 
-    // ---------------------------------------------------------
-    // 5. XÂY DỰNG BẢN ĐỒ 3 KHU VỰC (LƯỚI ÁNH KIM + 65 CÂY CỔ THỤ)
-    // ---------------------------------------------------------
+    // 5. Xây dựng bản đồ 3 khu vực (Lưới ánh kim + 65 cây cổ thụ)
     let npcElder = null;
 
     function buildWorld() {
-      // Nền tối kiếm hiệp sang trọng + lưới ánh kim như bản hồi sáng
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(160, 160),
         new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9, metalness: 0.15 })
@@ -690,7 +666,6 @@
       grid.material.transparent = true;
       scene.add(grid);
 
-      // Con đường đá ánh kim chạy dọc 3 khu vực
       const road = new THREE.Mesh(
         new THREE.BoxGeometry(7.5, 0.08, 124),
         new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, metalness: 0.25 })
@@ -699,7 +674,7 @@
       road.receiveShadow = true;
       scene.add(road);
 
-      // --- KHU 1: THÀNH LẠC DƯƠNG (z > 20, Khu An Toàn) ---
+      // Khu 1: Thành Lạc Dương
       const townFloor = new THREE.Mesh(
         new THREE.CylinderGeometry(18, 18.5, 0.2, 32),
         new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65, metalness: 0.3 })
@@ -716,7 +691,6 @@
       townRing.position.set(0, 0.22, 35);
       scene.add(townRing);
 
-      // Đình Lạc Dương (4 cột son + mái ngói cong)
       const pavMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 });
       const roofMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.45, roughness: 0.35 });
       [[-4, 44], [4, 44], [-4, 52], [4, 52]].forEach(([px, pz]) => {
@@ -731,7 +705,6 @@
       roof.castShadow = true;
       scene.add(roof);
 
-      // Đèn đá dẫn đường dọc trục chính
       for (let z = -30; z <= 32; z += 12) {
         [-4.8, 4.8].forEach(lx => {
           const post = new THREE.Mesh(
@@ -749,7 +722,6 @@
         });
       }
 
-      // NPC Trưởng Lão Lạc Dương
       npcElder = createHumanoidRig(0x0f766e, 0xfbbf24, 0x34d399, 1.08, false);
       npcElder.position.set(0, 0.2, 29);
       npcElder.rotation.y = 0;
@@ -763,7 +735,7 @@
       npcHalo.position.set(0, 0.25, 29);
       scene.add(npcHalo);
 
-      // --- KHU 2: RỪNG U MINH (65 CÂY CỔ THỤ + ĐÁ TẢNG) ---
+      // Khu 2: Rừng U Minh (65 cây cổ thụ + đá tảng)
       const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.9 });
       let seed = 2026;
       const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -803,7 +775,6 @@
         trees++;
       }
 
-      // Đá tảng rải rác
       const rockMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
       for (let i = 0; i < 24; i++) {
         const rx = (rand() - 0.5) * 120;
@@ -816,7 +787,7 @@
         scene.add(rock);
       }
 
-      // --- KHU 3: HUYẾT CHIẾN ĐÀI (z < -25, ĐẤU BOSS MA TÔN) ---
+      // Khu 3: Huyết Chiến Đài
       const arena = new THREE.Mesh(
         new THREE.CylinderGeometry(16, 17, 0.35, 36),
         new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.6, metalness: 0.35 })
@@ -851,15 +822,12 @@
       });
     }
 
-    // ---------------------------------------------------------
-    // 6. QUÁI VẬT, BOSS MA TÔN (CÓ VÒNG CẢNH BÁO ĐỎ) & CAO THỦ PK
-    // ---------------------------------------------------------
+    // 6. Quái vật, Boss Ma Tôn & Cao Thủ PK
     const enemies = [];
     const pkRivals = [];
     const vfxList = [];
 
     function spawnEnemiesAndRivals() {
-      // 10 Quái thường trong Rừng U Minh
       const mobConfigs = [
         { name: 'Yêu Lang', color: 0x475569, hp: 280, atk: 24, gold: 45, exp: 35 },
         { name: 'Hắc Y Ma Binh', color: 0x581c87, hp: 360, atk: 32, gold: 65, exp: 48 }
@@ -897,12 +865,10 @@
         });
       }
 
-      // BOSS HUYẾT MA TÔN tại Huyết Chiến Đài
       const bossModel = createHumanoidRig(0x4c0519, 0x9f1239, 0xf43f5e, 1.75, true);
       bossModel.position.set(0, 0.35, -45);
       scene.add(bossModel);
 
-      // Vòng cảnh báo đỏ dưới chân Boss khi tụ chiêu AoE
       const aoeWarn = new THREE.Mesh(
         new THREE.RingGeometry(0.4, 9.5, 36),
         new THREE.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
@@ -920,7 +886,6 @@
         aoeCd: 6.5, aoeCharging: 0, aoeWarn
       });
 
-      // 3 Cao Thủ Giang Hồ (PK khi bật Đồ Sát)
       const rivalSpecs = [
         { name: 'Bắc Kiều Phong', robe: 0x7c2d12, armor: 0xf59e0b, x: 18, z: -6 },
         { name: 'Tây Độc Âu Dương', robe: 0x3b0764, armor: 0xc084fc, x: -18, z: -10 },
@@ -938,9 +903,7 @@
       });
     }
 
-    // ---------------------------------------------------------
-    // 7. HIỆU ỨNG KỸ NĂNG 3D HOÀNH TRÁNG + SỐ SÁT THƯƠNG BAY LÊN
-    // ---------------------------------------------------------
+    // 7. Hiệu ứng kỹ năng 3D & số sát thương bay lên
     function spawnFloatingText(worldPos, text, color = '#fde047', size = '18px') {
       const p = worldPos.clone();
       p.y += 2.2;
@@ -1007,7 +970,6 @@
         scene.add(arc);
         vfxList.push({ mesh: arc, life: 0.28, maxLife: 0.28, kind: 'slash', spin: 9 });
         spawnHitSparks(pos.x + fwd.x * 2, 1.3, pos.z + fwd.z * 2, color, 7);
-
       } else if (skillIdx === 1) {
         for (let k = 0; k < 3; k++) {
           const torus = new THREE.Mesh(
@@ -1020,7 +982,6 @@
           scene.add(torus);
           vfxList.push({ mesh: torus, life: 0.55, maxLife: 0.55, kind: 'spinRing', spin: 16 - k * 2 });
         }
-
       } else if (skillIdx === 2) {
         for (let k = 0; k < 5; k++) {
           const ghost = new THREE.Mesh(
@@ -1032,7 +993,6 @@
           vfxList.push({ mesh: ghost, life: 0.32 + k * 0.04, maxLife: 0.5, kind: 'fade' });
         }
         spawnVFX(pos.x, 0.35, pos.z, range * 0.75, color, true);
-
       } else if (skillIdx === 3) {
         const aura = new THREE.Mesh(
           new THREE.CylinderGeometry(2.1, 2.1, 3.6, 20, 1, true),
@@ -1055,7 +1015,6 @@
             vel: new THREE.Vector3(0, 3.8 + Math.random() * 2, 0), noGravity: true
           });
         }
-
       } else if (skillIdx === 4) {
         spawnVFX(pos.x, 0.3, pos.z, range * 0.95, 0xf97316, true);
         for (let k = 0; k < 6; k++) {
@@ -1071,7 +1030,6 @@
           vfxList.push({ mesh: flame, life: 0.65, maxLife: 0.65, kind: 'pillar', spin: 7 });
         }
         spawnHitSparks(pos.x, 1.5, pos.z, 0xfacc15, 16);
-
       } else if (skillIdx === 5) {
         spawnVFX(pos.x, 0.35, pos.z, range, 0xc084fc, true);
         spawnVFX(pos.x, 0.4, pos.z, range * 0.65, 0xfde047, true);
@@ -1098,9 +1056,7 @@
       }
     }
 
-    // ---------------------------------------------------------
-    // 8. CHIẾN ĐẤU, RỚT ĐỒ, LÊN CẤP & CỐT TRUYỆN
-    // ---------------------------------------------------------
+    // 8. Chiến đấu, rớt đồ, lên cấp & cốt truyện
     function showToast(msg) {
       const box = document.getElementById('toast-box');
       const el = document.createElement('div');
@@ -1253,9 +1209,7 @@
       updateHUD();
     }
 
-    // ---------------------------------------------------------
-    // 9. GIAO DIỆN CHỌN PHÁI, MODAL (TÚI, CHỢ, BẢN ĐỒ, CỐT TRUYỆN)
-    // ---------------------------------------------------------
+    // 9. Giao diện chọn phái & Modal
     function renderSectCards() {
       const grid = document.getElementById('sect-grid');
       grid.innerHTML = SECTS.map((s, idx) => `
@@ -1527,9 +1481,7 @@
       });
     }
 
-    // ---------------------------------------------------------
-    // 10. KHỞI ĐỘNG NHÂN VẬT (MẶC ĐỊNH HOẶC NẠP FILE .GLB)
-    // ---------------------------------------------------------
+    // 10. Khởi động nhân vật (Mặc định hoặc nạp file .glb)
     function loadPlayerModel() {
       if (player.model) {
         player.group.remove(player.model);
@@ -1572,9 +1524,7 @@
       }
     }
 
-    // ---------------------------------------------------------
-    // 11. ĐIỀU KHIỂN BÀN PHÍM, CHUỘT XOAY CAMERA & JOYSTICK CẢM ỨNG
-    // ---------------------------------------------------------
+    // 11. Điều khiển bàn phím, chuột xoay camera & Joystick cảm ứng
     const keys = {};
     window.addEventListener('keydown', e => {
       keys[e.code] = true;
@@ -1598,7 +1548,6 @@
     });
     window.addEventListener('pointerup', () => { isDraggingCam = false; });
 
-    // Joystick ảo
     const joyZone = document.getElementById('joystick-zone');
     const joyKnob = document.getElementById('joystick-knob');
     let joyActive = false;
@@ -1629,9 +1578,7 @@
     joyZone.addEventListener('pointerup', resetJoy);
     joyZone.addEventListener('pointercancel', resetJoy);
 
-    // ---------------------------------------------------------
-    // 12. VẼ MINI-MAP TRỰC TIẾP
-    // ---------------------------------------------------------
+    // 12. Vẽ Mini-Map trực tiếp
     const miniCanvas = document.getElementById('minimap-canvas');
     const miniCtx = miniCanvas.getContext('2d');
 
@@ -1642,7 +1589,6 @@
 
       const toMap = (x, z) => [((x + 78) / 156) * w, ((z + 78) / 156) * h];
 
-      // Vùng Thành Lạc Dương (xanh) & Huyết Chiến Đài (đỏ)
       const [tx, tz] = toMap(0, 35);
       miniCtx.fillStyle = 'rgba(16, 185, 129, 0.22)';
       miniCtx.beginPath(); miniCtx.arc(tx, tz, 15, 0, Math.PI * 2); miniCtx.fill();
@@ -1651,12 +1597,10 @@
       miniCtx.fillStyle = 'rgba(225, 29, 72, 0.26)';
       miniCtx.beginPath(); miniCtx.arc(bx, bz, 14, 0, Math.PI * 2); miniCtx.fill();
 
-      // NPC Trưởng Lão
       const [nx, nz] = toMap(0, 29);
       miniCtx.fillStyle = '#34d399';
       miniCtx.beginPath(); miniCtx.arc(nx, nz, 3.2, 0, Math.PI * 2); miniCtx.fill();
 
-      // Quái & Boss
       enemies.forEach(en => {
         if (en.deadTimer > 0) return;
         const [ex, ez] = toMap(en.group.position.x, en.group.position.z);
@@ -1664,7 +1608,6 @@
         miniCtx.beginPath(); miniCtx.arc(ex, ez, en.isBoss ? 4.5 : 2.3, 0, Math.PI * 2); miniCtx.fill();
       });
 
-      // Cao Thủ PK (chấm tím)
       pkRivals.forEach(rv => {
         if (rv.deadTimer > 0) return;
         const [rx, rz] = toMap(rv.group.position.x, rv.group.position.z);
@@ -1672,15 +1615,12 @@
         miniCtx.beginPath(); miniCtx.arc(rx, rz, 2.8, 0, Math.PI * 2); miniCtx.fill();
       });
 
-      // Người chơi (chấm vàng sáng)
       const [px, pz] = toMap(player.group.position.x, player.group.position.z);
       miniCtx.fillStyle = '#fde047';
       miniCtx.beginPath(); miniCtx.arc(px, pz, 3.8, 0, Math.PI * 2); miniCtx.fill();
     }
 
-    // ---------------------------------------------------------
-    // 13. GẮN SỰ KIỆN NÚT BẤM UI
-    // ---------------------------------------------------------
+    // 13. Gắn sự kiện nút bấm UI
     function initUI() {
       renderSectCards();
       buildSkillBar();
@@ -1766,9 +1706,7 @@
       });
     }
 
-    // ---------------------------------------------------------
-    // 14. VÒNG LẶP GAME CHÍNH (ANIMATION LOOP)
-    // ---------------------------------------------------------
+    // 14. Vòng lặp game chính
     const clock = new THREE.Clock();
 
     function animate() {
@@ -1785,7 +1723,6 @@
 
       if (player.mixer) player.mixer.update(dt);
 
-      // Cập nhật hồi chiêu 6 kỹ năng
       for (let i = 0; i < SKILLS.length; i++) {
         if (player.skillCds[i] > 0) {
           player.skillCds[i] = Math.max(0, player.skillCds[i] - dt);
@@ -1799,7 +1736,6 @@
         }
       }
 
-      // Tính hướng di chuyển từ WASD / Joystick theo góc xoay Camera
       let inX = 0, inZ = 0;
       if (keys['KeyW'] || keys['ArrowUp']) inZ -= 1;
       if (keys['KeyS'] || keys['ArrowDown']) inZ += 1;
@@ -1823,7 +1759,6 @@
           if (storyStep === 0) openElderDialog();
         }
       } else if (autoMode) {
-        // Tự tìm quái gần nhất đánh
         let nearest = null, minD = 999;
         enemies.forEach(en => {
           if (en.deadTimer > 0) return;
@@ -1866,7 +1801,6 @@
 
       if (npcElder) updateHumanoidAnimation(npcElder, dt, now, false, -1, 0);
 
-      // Cập nhật tên khu vực & hồi máu trong Thành An Toàn
       const pz = player.group.position.z;
       const inSafeZone = pz > 20;
       document.getElementById('zone-label').textContent =
@@ -1878,7 +1812,6 @@
         updateHUD();
       }
 
-      // Cập nhật Quái & Boss Ma Tôn
       let showBossBar = false;
       enemies.forEach(en => {
         if (en.deadTimer > 0) {
@@ -1897,7 +1830,6 @@
           document.getElementById('boss-hp-text').textContent = `${Math.round(en.hp)} / ${en.maxHp}`;
           document.getElementById('boss-hp-fill').style.width = `${(en.hp / en.maxHp) * 100}%`;
 
-          // Cơ chế chiêu AoE vòng cảnh báo đỏ của Boss
           if (en.aoeCharging > 0) {
             en.aoeCharging -= dt;
             en.aoeWarn.position.set(en.group.position.x, 0.42, en.group.position.z);
@@ -1950,7 +1882,6 @@
       });
       document.getElementById('boss-bar').style.display = showBossBar ? 'block' : 'none';
 
-      // Cập nhật Cao Thủ Giang Hồ (PK)
       pkRivals.forEach(rv => {
         if (rv.deadTimer > 0) {
           rv.deadTimer -= dt;
@@ -1991,7 +1922,6 @@
         updateHumanoidAnimation(rv.group, dt, now, rvMoving, rv.swingAnim > 0 ? 0 : -1, rProg);
       });
 
-      // Cập nhật hiệu ứng VFX 3D
       for (let i = vfxList.length - 1; i >= 0; i--) {
         const v = vfxList[i];
         v.life -= dt;
@@ -2037,7 +1967,6 @@
         }
       }
 
-      // Camera bám theo nhân vật + rung chấn khi ra chiêu
       const camDist = 13.0;
       const targetCam = new THREE.Vector3(
         player.group.position.x + Math.sin(camYaw) * camDist,
@@ -2056,7 +1985,6 @@
       renderer.render(scene, camera);
     }
 
-    // Khởi chạy toàn bộ thế giới & UI
     try {
       buildWorld();
       spawnEnemiesAndRivals();
