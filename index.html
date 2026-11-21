@@ -2057,10 +2057,18 @@
     }
 
     // Khởi chạy toàn bộ thế giới & UI
-    buildWorld();
-    spawnEnemiesAndRivals();
-    initUI();
-    animate();
+    try {
+      buildWorld();
+      spawnEnemiesAndRivals();
+      initUI();
+      animate();
+    } catch (err) {
+      console.error('Lỗi khởi động game:', err);
+      const box = document.getElementById('toast-box');
+      if (box) {
+        box.innerHTML = `<div class="glass-panel px-4 py-3 rounded-xl text-xs sm:text-sm font-bold text-rose-300 border-rose-500">⚠️ Lỗi khởi động 3D: ${err.message}</div>`;
+      }
+    }
   </script>
 </body>
 </html>
